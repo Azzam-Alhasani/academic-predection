@@ -5,188 +5,128 @@
 {% block content %}
 <div class="row g-4 mt-1">
 
-  <!-- ── Top Performers ────────────────────────────────────── -->
   <div class="col-12 col-lg-6">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-trophy text-warning"></i>
-        <span class="fw-semibold">Top 5 Performers</span>
+        <i class="fa-solid fa-chart-column text-primary"></i><span class="fw-semibold">Final Grade Distribution (0-20)</span>
       </div>
-      <div class="card-body p-0">
-        <table class="table table-sm mb-0">
-          <thead><tr><th>#</th><th>Name</th><th>Avg Score</th><th>Grade</th></tr></thead>
-          <tbody>
-            {% for s in data.get('top_performers', []) %}
-            <tr>
-              <td>
-                {% if loop.index0 == 0 %}<i class="fa-solid fa-medal text-warning"></i>
-                {% elif loop.index0 == 1 %}<i class="fa-solid fa-medal text-secondary"></i>
-                {% elif loop.index0 == 2 %}<i class="fa-solid fa-medal" style="color:#cd7f32;"></i>
-                {% else %}{{ loop.index }}{% endif %}
-              </td>
-              <td class="fw-semibold">{{ s.name }}</td>
-              <td>{{ s.avg_score }}</td>
-              <td><span class="badge grade-badge grade-{{ s.grade_letter }}">{{ s.grade_letter }}</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      <div class="card-body chart-wrapper"><canvas id="histChart"></canvas></div>
     </div>
   </div>
-
-  <!-- ── Bottom Performers ─────────────────────────────────── -->
   <div class="col-12 col-lg-6">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-arrow-trend-down text-danger"></i>
-        <span class="fw-semibold">Needs Attention (Bottom 5)</span>
+        <i class="fa-solid fa-language text-info"></i><span class="fw-semibold">Pass Rate by Subject</span>
       </div>
-      <div class="card-body p-0">
-        <table class="table table-sm mb-0">
-          <thead><tr><th>#</th><th>Name</th><th>Avg Score</th><th>Grade</th></tr></thead>
-          <tbody>
-            {% for s in data.get('bottom_performers', []) %}
-            <tr>
-              <td class="text-danger fw-bold">{{ loop.index }}</td>
-              <td class="fw-semibold">{{ s.name }}</td>
-              <td class="text-danger">{{ s.avg_score }}</td>
-              <td><span class="badge grade-badge grade-{{ s.grade_letter }}">{{ s.grade_letter }}</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      <div class="card-body chart-wrapper"><canvas id="subjectChart"></canvas></div>
     </div>
   </div>
 
-  <!-- ── GPA Distribution ──────────────────────────────────── -->
   <div class="col-12 col-lg-6">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-chart-column text-info"></i>
-        <span class="fw-semibold">GPA Distribution</span>
+        <i class="fa-solid fa-clock text-success"></i><span class="fw-semibold">Pass Rate by Weekly Study Time</span>
       </div>
-      <div class="card-body chart-wrapper">
-        <canvas id="gpaHistChart"></canvas>
-      </div>
+      <div class="card-body chart-wrapper"><canvas id="studyChart"></canvas></div>
     </div>
   </div>
-
-  <!-- ── Subject Pass Rates ─────────────────────────────────── -->
   <div class="col-12 col-lg-6">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-percent text-success"></i>
-        <span class="fw-semibold">Subject Pass Rates (%)</span>
+        <i class="fa-solid fa-rotate-left text-danger"></i><span class="fw-semibold">Pass Rate by Past Class Failures</span>
       </div>
-      <div class="card-body chart-wrapper">
-        <canvas id="subjectPassChart"></canvas>
-      </div>
+      <div class="card-body chart-wrapper"><canvas id="failuresChart"></canvas></div>
     </div>
   </div>
 
-  <!-- ── Gender Subject Comparison ───────────────────────────── -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-graduation-cap text-warning"></i><span class="fw-semibold">Pass Rate by Higher-Education Plans</span>
+      </div>
+      <div class="card-body chart-wrapper"><canvas id="higherChart"></canvas></div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-venus-mars text-secondary"></i><span class="fw-semibold">Gender Comparison</span>
+      </div>
+      <div class="card-body chart-wrapper"><canvas id="genderChart"></canvas></div>
+    </div>
+  </div>
+
   <div class="col-12">
     <div class="card">
       <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-venus-mars text-primary"></i>
-        <span class="fw-semibold">Subject Performance by Gender</span>
+        <i class="fa-solid fa-chart-scatter text-info"></i><span class="fw-semibold">Absences vs Final Grade (random sample of 250)</span>
       </div>
-      <div class="card-body chart-wrapper" style="max-height:350px;">
-        <canvas id="genderSubjectChart"></canvas>
-      </div>
+      <div class="card-body chart-wrapper"><canvas id="scatterChart"></canvas></div>
     </div>
   </div>
 
-  <!-- ── Attendance vs Score Scatter ──────────────────────────── -->
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-circle-dot text-warning"></i>
-        <span class="fw-semibold">Attendance vs Average Score</span>
-      </div>
-      <div class="card-body chart-wrapper" style="max-height:350px;">
-        <canvas id="attendanceScatterChart"></canvas>
-      </div>
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold"><i class="fa-solid fa-trophy text-warning me-2"></i>Top Final Grades</div>
+      <div class="card-body p-0"><table class="table table-sm mb-0">
+        <thead><tr><th>Student</th><th>Subject</th><th>G3</th><th>Grade</th></tr></thead>
+        <tbody>{% for s in data.get('top_performers', []) %}
+          <tr><td>{{ s.name }}</td><td>{{ s.subject }}</td><td>{{ s.G3 | int }}</td><td><span class="badge grade-badge grade-{{ s.grade_letter }}">{{ s.grade_letter }}</span></td></tr>
+        {% endfor %}</tbody></table></div>
     </div>
   </div>
-
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold"><i class="fa-solid fa-arrow-down-wide-short text-danger me-2"></i>Lowest Final Grades</div>
+      <div class="card-body p-0"><table class="table table-sm mb-0">
+        <thead><tr><th>Student</th><th>Subject</th><th>G3</th><th>Grade</th></tr></thead>
+        <tbody>{% for s in data.get('bottom_performers', []) %}
+          <tr><td>{{ s.name }}</td><td>{{ s.subject }}</td><td>{{ s.G3 | int }}</td><td><span class="badge grade-badge grade-{{ s.grade_letter }}">{{ s.grade_letter }}</span></td></tr>
+        {% endfor %}</tbody></table></div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-const d = {{ data_json | safe }};
+const d = {{ data | tojson }};
+const blue = '#0d6efd', green = '#198754', red = '#dc3545', amber = '#ffc107', cyan = '#0dcaf0';
 
-// GPA Histogram
-new Chart(document.getElementById('gpaHistChart').getContext('2d'), {
-  type: 'bar',
-  data: {
-    labels: d.gpa_hist_labels || [],
-    datasets: [{ label: 'Students', data: d.gpa_hist_values || [], backgroundColor: '#0dcaf0', borderRadius: 5 }]
-  },
-  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-});
+function bar(id, labels, sets, max) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels: labels || [], datasets: sets.map(s => ({ ...s, borderRadius: 6 })) },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: sets.length > 1 } },
+      scales: { y: { beginAtZero: true, max: max } } }
+  });
+}
 
-// Subject Pass Rates
-const passRates = d.subject_pass_rates || {};
-new Chart(document.getElementById('subjectPassChart').getContext('2d'), {
-  type: 'bar',
-  data: {
-    labels: Object.keys(passRates).map(s => s.charAt(0).toUpperCase() + s.slice(1)),
-    datasets: [{
-      label: 'Pass Rate %',
-      data: Object.values(passRates),
-      backgroundColor: Object.values(passRates).map(v => v >= 70 ? '#198754' : v >= 50 ? '#ffc107' : '#dc3545'),
-      borderRadius: 5,
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true, max: 100 } }
-  }
-});
+bar('histChart', d.grade_hist_labels, [{ label: 'Students', data: d.grade_hist_values, backgroundColor: blue }]);
+bar('subjectChart', d.subject_labels, [
+  { label: 'Pass rate %', data: d.subject_pass_rate, backgroundColor: green },
+  { label: 'Avg final grade (x5)', data: (d.subject_avg_grade || []).map(v => v * 5), backgroundColor: cyan },
+], 100);
+bar('studyChart', d.studytime_labels, [{ label: 'Pass rate %', data: d.studytime_pass_rate, backgroundColor: green }], 100);
+bar('failuresChart', d.failures_labels, [{ label: 'Pass rate %', data: d.failures_pass_rate, backgroundColor: red }], 100);
+bar('higherChart', d.higher_labels, [{ label: 'Pass rate %', data: d.higher_pass_rate, backgroundColor: amber }], 100);
+bar('genderChart', d.gender_labels, [
+  { label: 'Pass rate %', data: d.gender_pass_rate, backgroundColor: green },
+  { label: 'Avg final grade (x5)', data: (d.gender_avg_grade || []).map(v => v * 5), backgroundColor: cyan },
+], 100);
 
-// Gender Subject Grouped Bar
-const colors = ['rgba(13,110,253,0.8)', 'rgba(220,53,69,0.8)'];
-const genderSubDatasets = (d.gender_labels || []).map((g, i) => ({
-  label: g,
-  data: (d.subject_names || []).map(s => (d.gender_subject_data || {})[s]?.[i] || 0),
-  backgroundColor: colors[i % colors.length],
-  borderRadius: 4,
-}));
-new Chart(document.getElementById('genderSubjectChart').getContext('2d'), {
-  type: 'bar',
-  data: {
-    labels: (d.subject_names || []).map(s => s.charAt(0).toUpperCase() + s.slice(1)),
-    datasets: genderSubDatasets,
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    scales: { y: { beginAtZero: true, max: 100 } }
-  }
-});
-
-// Attendance Scatter
-new Chart(document.getElementById('attendanceScatterChart').getContext('2d'), {
+new Chart(document.getElementById('scatterChart'), {
   type: 'scatter',
-  data: {
-    datasets: [{
-      label: 'Students',
-      data: (d.scatter_attendance || []).map((att, i) => ({ x: att, y: (d.scatter_score || [])[i] })),
-      backgroundColor: 'rgba(255,193,7,0.7)',
-      pointRadius: 5,
-    }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    scales: {
-      x: { title: { display: true, text: 'Attendance %' } },
-      y: { title: { display: true, text: 'Average Score' }, suggestedMin: 0, suggestedMax: 100 }
-    }
-  }
+  data: { datasets: [{
+    label: 'Students',
+    data: (d.scatter_absences || []).map((x, i) => ({ x: x, y: d.scatter_grade[i] })),
+    backgroundColor: 'rgba(13,202,240,0.6)',
+  }]},
+  options: { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { title: { display: true, text: 'Absences' } },
+              y: { title: { display: true, text: 'Final grade (0-20)' }, min: 0, max: 20 } } }
 });
 </script>
 {% endblock %}

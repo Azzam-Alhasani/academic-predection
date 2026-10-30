@@ -1,47 +1,80 @@
 """
-Student management routes: list, add, view, edit, delete.
+Student management routes: list (search / filter / pages), add, view, edit, delete.
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
+
+from app.auth import login_required
+from app.data.analytics_calc import (
+    build_class_stats,
+    calculate_student_indicators,
+    recommend_student,
+)
 from app.data.data_loader import (
-    load_students,
-    get_student_by_id,
     add_student,
-    update_student,
     delete_student,
+    get_student_by_id,
+    load_students,
+    update_student,
 )
 from app.ml.predictor import invalidate_cache
-from app.auth import login_required
-from app.data.analytics_calc import calculate_student_indicators, recommend_student, build_class_stats
 
 students_bp = Blueprint("students", __name__, url_prefix="/students")
 
-SUBJECT_COLS = ["math", "science", "english", "history", "cs"]
+PAGE_SIZE = 25
 
-# Fields that must be numeric, with their valid ranges (min, max).
-NUMERIC_FIELDS = {
+# Whole-number fields with their valid ranges. Only these fields are ever saved.
+INT_FIELDS = {
     "age": (10, 30),
-    "attendance_pct": (0, 100),
-    "assignments_submitted": (0, 12),
-    "study_hours_per_week": (0, 20),
-    "previous_gpa": (0, 4),
-    "previous_term_avg": (0, 100),
-    "math": (0, 100),
-    "science": (0, 100),
-    "english": (0, 100),
-    "history": (0, 100),
-    "cs": (0, 100),
+    "studytime": (1, 4),
+    "failures": (0, 4),
+    "absences": (0, 100),
+    "G1": (0, 20),
+    "G2": (0, 20),
+    "G3": (0, 20),
 }
-
-# Fields kept in the CSV exactly (subject scores are numeric and validated above).
-NON_NUMERIC_FIELDS = {"name", "gender"}
+CHOICE_FIELDS = {
+    "subject": ("Math", "Portuguese"),
+    "gender": ("Male", "Female"),
+    "higher": ("yes", "no"),
+    "internet": ("yes", "no"),
+}
 
 
 @students_bp.route("/")
 def student_list():
     df = load_students()
-    students = df.to_dict("records") if not df.empty else []
-    return render_template("students.html", students=students)
+    q = request.args.get("q", "").strip().lower()
+    subject = request.args.get("subject", "")
+    status = request.args.get("status", "")
+
+    if not df.empty:
+        if q:
+            haystack = df["name"].astype(str).str.lower() + " " + df["student_id"].astype(str)
+            df = df[haystack.str.contains(q, regex=False)]
+        if subject in CHOICE_FIELDS["subject"]:
+            df = df[df["subject"] == subject]
+        if status == "at_risk":
+            df = df[df["at_risk"] == 1]
+        elif status == "pass":
+            df = df[df["pass_fail"] == 1]
+        elif status == "fail":
+            df = df[df["pass_fail"] == 0]
+
+    total = len(df)
+    pages = max(1, -(-total // PAGE_SIZE))
+    try:
+        page = min(max(1, int(request.args.get("page", 1))), pages)
+    except ValueError:
+        page = 1
+    chunk = df.iloc[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
+    students = chunk.to_dict("records") if total else []
+
+    return render_template(
+        "students.html",
+        students=students, total=total, page=page, pages=pages,
+        q=request.args.get("q", "").strip(), subject=subject, status=status,
+    )
 
 
 @students_bp.route("/add", methods=["POST"])
@@ -51,10 +84,10 @@ def student_add():
     if error:
         flash(error, "danger")
         return redirect(url_for("students.student_list"))
-    add_student(data)
+    new_id = add_student(data)
     invalidate_cache()
-    flash("Student added successfully.", "success")
-    return redirect(url_for("students.student_list"))
+    flash(f"Student added (ID {new_id}).", "success")
+    return redirect(url_for("students.student_detail", student_id=new_id))
 
 
 @students_bp.route("/<int:student_id>")
@@ -66,13 +99,11 @@ def student_detail(student_id):
 
     df = load_students()
     class_stats = build_class_stats(df) if not df.empty else {}
-    indicators = calculate_student_indicators(student, class_stats)
-    recommendations = recommend_student(student, class_stats)
     return render_template(
         "student_detail.html",
         student=student,
-        indicators=indicators,
-        recommendations=recommendations,
+        indicators=calculate_student_indicators(student, class_stats),
+        recommendations=recommend_student(student, class_stats),
     )
 
 
@@ -85,10 +116,8 @@ def student_edit(student_id):
         return redirect(url_for("students.student_detail", student_id=student_id))
     success = update_student(student_id, data)
     invalidate_cache()
-    if success:
-        flash("Student updated successfully.", "success")
-    else:
-        flash("Student not found.", "danger")
+    flash("Student updated successfully." if success else "Student not found.",
+          "success" if success else "danger")
     return redirect(url_for("students.student_detail", student_id=student_id))
 
 
@@ -97,49 +126,38 @@ def student_edit(student_id):
 def student_delete(student_id):
     success = delete_student(student_id)
     invalidate_cache()
-    if success:
-        flash("Student deleted.", "info")
-    else:
-        flash("Student not found.", "danger")
+    flash("Student deleted." if success else "Student not found.", "info" if success else "danger")
     return redirect(url_for("students.student_list"))
 
 
 def _parse_form(form) -> tuple[dict, str | None]:
     """
-    Parse and validate a student form. Returns (data, error_message).
-    Numeric fields are clamped/validated to their allowed ranges, and the name
-    is required. A validation error returns (None, message).
+    Validate a student form. Only known fields are read (anything else is ignored).
+    Returns (data, error_message).
     """
     data = {}
-    for key in form:
-        # Skip the CSRF hidden field and other non-student fields.
-        if key == "csrf_token":
-            continue
-        val = form[key].strip()
 
-        if key in NUMERIC_FIELDS:
-            lo, hi = NUMERIC_FIELDS[key]
-            try:
-                number = float(val)
-            except ValueError:
-                return {}, f"Field '{key}' must be a number."
-            if number < lo or number > hi:
-                return {}, f"Field '{key}' must be between {lo} and {hi} (got {number:.1f})."
-            # Keep integers for whole-number fields, floats otherwise.
-            if key in ["age", "assignments_submitted"]:
-                data[key] = int(number)
-            else:
-                data[key] = number
-        else:
-            data[key] = val
+    name = form.get("name", "").strip()
+    if len(name) > 60:
+        return {}, "Name must be 60 characters or fewer."
+    if name:
+        data["name"] = name
 
-    if not data.get("name"):
-        return {}, "Student name is required."
+    for key, allowed in CHOICE_FIELDS.items():
+        value = form.get(key, "").strip()
+        if value not in allowed:
+            return {}, f"Field '{key}' must be one of: {', '.join(allowed)}."
+        data[key] = value
 
-    # Derive pass_fail from subject scores.
-    scores = [data.get(s, 0) for s in SUBJECT_COLS if s in data]
-    if scores:
-        avg = sum(scores) / len(scores)
-        data["pass_fail"] = 1 if avg >= 50 else 0
+    for key, (lo, hi) in INT_FIELDS.items():
+        raw = form.get(key, "").strip()
+        try:
+            number = float(raw)
+        except ValueError:
+            return {}, f"Field '{key}' must be a number."
+        if number != int(number) or number < lo or number > hi:
+            return {}, f"Field '{key}' must be a whole number between {lo} and {hi}."
+        data[key] = int(number)
 
+    data["pass_fail"] = 1 if data["G3"] >= 10 else 0
     return data, None

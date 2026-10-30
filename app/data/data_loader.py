@@ -1,80 +1,88 @@
 """
 Data loader for the Academic Performance Monitoring & Prediction System.
-Handles reading, writing, and computing statistics from the student CSV file.
+
+Works on the real UCI "Student Performance" data (Math + Portuguese). Grades
+G1, G2 and G3 are the first-period, second-period and final grades on a 0-20
+scale; a student passes with G3 >= 10.
 """
 
 import os
 import shutil
-import pandas as pd
+import threading
+
 import numpy as np
+import pandas as pd
 from flask import current_app
 
+PASS_MARK = 10
 
-SUBJECT_COLS = ["math", "science", "english", "history", "cs"]
+# Serialises read-modify-write cycles on the CSV (the web server runs several threads).
+_write_lock = threading.RLock()
+GRADE_COLS = ["G1", "G2", "G3"]
+DERIVED_COLS = ["final_score", "gpa", "grade_letter", "at_risk", "progress"]
+
+# studytime is coded 1-4 in the original questionnaire.
+STUDYTIME_LABELS = {1: "< 2 h", 2: "2-5 h", 3: "5-10 h", 4: "> 10 h"}
 
 
 def _get_data_file():
     data_file = current_app.config["DATA_FILE"]
     sample_file = current_app.config["SAMPLE_DATA_FILE"]
-    # Bootstrap from sample data if main file doesn't exist yet
+    # Bootstrap the working copy from the pristine real dataset on first run.
     if not os.path.exists(data_file) and os.path.exists(sample_file):
         shutil.copy(sample_file, data_file)
     return data_file
 
 
 def load_students() -> pd.DataFrame:
-    """Load student records from CSV, returning an empty DataFrame if file not found."""
+    """Load student records from CSV, returning an empty DataFrame if not found."""
     try:
-        path = _get_data_file()
-        df = pd.read_csv(path)
-        df = _compute_derived_columns(df)
-        return df
+        df = pd.read_csv(_get_data_file())
+        return _compute_derived_columns(df)
     except Exception:
         return pd.DataFrame()
 
 
 def save_students(df: pd.DataFrame) -> None:
-    """Persist the student DataFrame back to the CSV file."""
+    """Persist the student DataFrame back to the CSV file (derived columns excluded)."""
     path = _get_data_file()
-    # Drop derived columns before saving to avoid duplication
-    cols_to_drop = [c for c in ["avg_score", "gpa", "at_risk", "grade_letter"] if c in df.columns]
-    df.drop(columns=cols_to_drop).to_csv(path, index=False)
+    df.drop(columns=[c for c in DERIVED_COLS if c in df.columns]).to_csv(path, index=False)
+
+
+def _persistent(df: pd.DataFrame) -> pd.DataFrame:
+    return df[[c for c in df.columns if c not in DERIVED_COLS]].copy()
 
 
 def _compute_derived_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Add avg_score, gpa, grade_letter, and at_risk derived columns."""
-    present = [c for c in SUBJECT_COLS if c in df.columns]
-    if present:
-        df["avg_score"] = df[present].mean(axis=1).round(2)
-    if "avg_score" in df.columns:
-        df["gpa"] = (df["avg_score"] / 100 * 4.0).round(2)
-        df["grade_letter"] = df["avg_score"].apply(_score_to_grade)
-    if "attendance_pct" in df.columns and "avg_score" in df.columns:
-        df["at_risk"] = (
-            (df["avg_score"] < 50) | (df["attendance_pct"] < 60)
-        ).astype(int)
-    # Baseline for grade improvement/decline. If the column is absent (older CSV)
-    # or missing for a newly added student, fall back to the current average so
-    # improvement is treated as 0 (stable) rather than NaN.
-    if "avg_score" in df.columns:
-        if "previous_term_avg" not in df.columns:
-            df["previous_term_avg"] = df["avg_score"]
-        else:
-            df["previous_term_avg"] = df["previous_term_avg"].fillna(df["avg_score"])
+    """Add final_score (0-100), gpa (0-4), grade_letter, progress and at_risk."""
+    for col in GRADE_COLS:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df.dropna(subset=[c for c in GRADE_COLS if c in df.columns]).copy()
+
+    df["pass_fail"] = (df["G3"] >= PASS_MARK).astype(int)
+    df["final_score"] = (df["G3"] / 20 * 100).round(1)
+    df["gpa"] = (df["G3"] / 20 * 4.0).round(2)
+    df["grade_letter"] = df["final_score"].apply(_score_to_grade)
+    df["progress"] = (df["G3"] - df["G2"]).round(1)
+
+    absences = pd.to_numeric(df.get("absences"), errors="coerce").fillna(0)
+    failures = pd.to_numeric(df.get("failures"), errors="coerce").fillna(0)
+    df["at_risk"] = ((df["G3"] < PASS_MARK) | (absences >= 10) | (failures >= 2)).astype(int)
     return df
 
 
 def _score_to_grade(score: float) -> str:
+    """Letter grade from a 0-100 score. D is the lowest passing grade (10/20 = 50)."""
     if score >= 90:
         return "A"
-    elif score >= 80:
+    if score >= 80:
         return "B"
-    elif score >= 70:
+    if score >= 70:
         return "C"
-    elif score >= 60:
+    if score >= 50:
         return "D"
-    else:
-        return "F"
+    return "F"
 
 
 def get_student_by_id(student_id: int) -> dict | None:
@@ -85,51 +93,71 @@ def get_student_by_id(student_id: int) -> dict | None:
     row = df[df["student_id"] == int(student_id)]
     if row.empty:
         return None
-    return row.iloc[0].to_dict()
+    record = row.iloc[0].to_dict()
+    # Convert NaN (columns left blank for newly added students) to None for templates.
+    return {k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in record.items()}
 
 
-def add_student(data: dict) -> int:
+def _add_student_unlocked(data: dict) -> int:
     """Add a new student record and return the new student_id."""
     df = load_students()
+    base = _persistent(df) if not df.empty else pd.DataFrame()
     new_id = int(df["student_id"].max()) + 1 if not df.empty else 1
+    data = {k: v for k, v in data.items() if k not in DERIVED_COLS}
     data["student_id"] = new_id
-    # Drop derived columns from new record before appending
-    for col in ["avg_score", "gpa", "at_risk", "grade_letter"]:
-        data.pop(col, None)
-    new_row = pd.DataFrame([data])
-    persistent_cols = [c for c in df.columns if c not in ["avg_score", "gpa", "at_risk", "grade_letter"]]
-    base_df = df[persistent_cols] if not df.empty else pd.DataFrame()
-    combined = pd.concat([base_df, new_row], ignore_index=True)
+    if not str(data.get("name", "")).strip():
+        data["name"] = f"Student {new_id:04d}"
+    combined = pd.concat([base, pd.DataFrame([data])], ignore_index=True)
     save_students(combined)
     return new_id
 
 
-def update_student(student_id: int, data: dict) -> bool:
+def _update_student_unlocked(student_id: int, data: dict) -> bool:
     """Update an existing student record. Returns True on success."""
     df = load_students()
-    persistent_cols = [c for c in df.columns if c not in ["avg_score", "gpa", "at_risk", "grade_letter"]]
-    base_df = df[persistent_cols].copy()
-    idx = base_df[base_df["student_id"] == int(student_id)].index
+    if df.empty:
+        return False
+    base = _persistent(df)
+    idx = base[base["student_id"] == int(student_id)].index
     if idx.empty:
         return False
     for key, val in data.items():
-        if key in base_df.columns:
-            base_df.at[idx[0], key] = val
-    save_students(base_df)
+        if key in base.columns and key != "student_id":
+            base.at[idx[0], key] = val
+    save_students(base)
     return True
+
+
+def _delete_student_unlocked(student_id: int) -> bool:
+    """Delete a student record. Returns True on success."""
+    df = load_students()
+    if df.empty:
+        return False
+    base = _persistent(df)
+    remaining = base[base["student_id"] != int(student_id)]
+    if len(remaining) == len(base):
+        return False
+    save_students(remaining)
+    return True
+
+
+def add_student(data: dict) -> int:
+    with _write_lock:
+        return _add_student_unlocked(data)
+
+
+def update_student(student_id: int, data: dict) -> bool:
+    with _write_lock:
+        return _update_student_unlocked(student_id, data)
 
 
 def delete_student(student_id: int) -> bool:
-    """Delete a student record. Returns True on success."""
-    df = load_students()
-    persistent_cols = [c for c in df.columns if c not in ["avg_score", "gpa", "at_risk", "grade_letter"]]
-    base_df = df[persistent_cols].copy()
-    before = len(base_df)
-    base_df = base_df[base_df["student_id"] != int(student_id)]
-    if len(base_df) == before:
-        return False
-    save_students(base_df)
-    return True
+    with _write_lock:
+        return _delete_student_unlocked(student_id)
+
+
+def _pass_rate(frame: pd.DataFrame) -> float:
+    return round(float(frame["pass_fail"].mean() * 100), 1) if len(frame) else 0.0
 
 
 def get_dashboard_stats() -> dict:
@@ -138,40 +166,41 @@ def get_dashboard_stats() -> dict:
     if df.empty:
         return {}
 
+    total = len(df)
     stats = {
-        "total_students": len(df),
-        "pass_count": int(df["pass_fail"].sum()) if "pass_fail" in df.columns else 0,
-        "fail_count": int((df["pass_fail"] == 0).sum()) if "pass_fail" in df.columns else 0,
-        "avg_gpa": round(float(df["gpa"].mean()), 2) if "gpa" in df.columns else 0,
-        "at_risk_count": int(df["at_risk"].sum()) if "at_risk" in df.columns else 0,
-        "avg_attendance": round(float(df["attendance_pct"].mean()), 1) if "attendance_pct" in df.columns else 0,
+        "total_students": total,
+        "pass_count": int(df["pass_fail"].sum()),
+        "fail_count": int((df["pass_fail"] == 0).sum()),
+        "avg_grade": round(float(df["G3"].mean()), 2),
+        "at_risk_count": int(df["at_risk"].sum()),
+        "avg_absences": round(float(pd.to_numeric(df["absences"], errors="coerce").mean()), 1),
     }
-    stats["pass_rate"] = round(stats["pass_count"] / stats["total_students"] * 100, 1) if stats["total_students"] else 0
+    stats["pass_rate"] = round(stats["pass_count"] / total * 100, 1)
 
-    # Grade distribution
-    if "grade_letter" in df.columns:
-        grade_dist = df["grade_letter"].value_counts().reindex(["A", "B", "C", "D", "F"], fill_value=0)
-        stats["grade_distribution"] = grade_dist.to_dict()
+    dist = df["grade_letter"].value_counts().reindex(["A", "B", "C", "D", "F"], fill_value=0)
+    stats["grade_distribution"] = {k: int(v) for k, v in dist.items()}
 
-    # Subject averages
-    present_subjects = [c for c in SUBJECT_COLS if c in df.columns]
-    if present_subjects:
-        stats["subject_averages"] = {s: round(float(df[s].mean()), 1) for s in present_subjects}
+    stats["period_averages"] = {g: round(float(df[g].mean()), 2) for g in GRADE_COLS}
 
-    # Monthly/cohort trend (simulate using study_hours bins)
-    if "study_hours_per_week" in df.columns and "avg_score" in df.columns:
-        bins = pd.cut(df["study_hours_per_week"], bins=5)
-        trend = df.groupby(bins, observed=False)["avg_score"].mean().round(1)
-        stats["study_trend_labels"] = [str(b) for b in trend.index]
-        stats["study_trend_values"] = trend.tolist()
+    if "subject" in df.columns:
+        by_subject = df.groupby("subject")
+        stats["subject_summary"] = {
+            name: {
+                "students": int(len(g)),
+                "avg_grade": round(float(g["G3"].mean()), 2),
+                "pass_rate": _pass_rate(g),
+            }
+            for name, g in by_subject
+        }
 
-    # Class-level improvement indicators (Requirement 3)
-    if "avg_score" in df.columns and "previous_term_avg" in df.columns:
-        improvement = df["avg_score"] - df["previous_term_avg"]
-        stats["avg_improvement"] = round(float(improvement.mean()), 2)
-        stats["improving_count"] = int((improvement > 2).sum())
-        stats["declining_count"] = int((improvement < -2).sum())
+    if "studytime" in df.columns:
+        grouped = df.groupby("studytime")["G3"].mean().round(2)
+        stats["study_trend_labels"] = [STUDYTIME_LABELS.get(int(k), str(k)) for k in grouped.index]
+        stats["study_trend_values"] = grouped.tolist()
 
+    stats["avg_improvement"] = round(float(df["progress"].mean()), 2)
+    stats["improving_count"] = int((df["progress"] >= 1).sum())
+    stats["declining_count"] = int((df["progress"] <= -1).sum())
     return stats
 
 
@@ -182,46 +211,45 @@ def get_analytics_data() -> dict:
         return {}
 
     data = {}
-    present_subjects = [c for c in SUBJECT_COLS if c in df.columns]
+    cols = ["name", "subject", "G3", "grade_letter"]
+    data["top_performers"] = df.nlargest(5, ["G3", "G2"])[cols].to_dict("records")
+    data["bottom_performers"] = df.nsmallest(5, ["G3", "G2"])[cols].to_dict("records")
 
-    # Top and bottom performers
-    if "avg_score" in df.columns and "name" in df.columns:
-        top = df.nlargest(5, "avg_score")[["name", "avg_score", "grade_letter"]].to_dict("records")
-        bottom = df.nsmallest(5, "avg_score")[["name", "avg_score", "grade_letter"]].to_dict("records")
-        data["top_performers"] = top
-        data["bottom_performers"] = bottom
+    # Final-grade histogram (0-20)
+    counts = np.bincount(df["G3"].astype(int).clip(0, 20), minlength=21)
+    data["grade_hist_labels"] = [str(i) for i in range(21)]
+    data["grade_hist_values"] = counts.tolist()
 
-    # Subject breakdown by gender
-    if "gender" in df.columns and present_subjects:
-        gender_group = df.groupby("gender")[present_subjects].mean().round(1)
-        data["gender_labels"] = gender_group.index.tolist()
-        data["gender_subject_data"] = {s: gender_group[s].tolist() for s in present_subjects}
-        data["subject_names"] = present_subjects
+    # Gender and subject comparisons
+    for key, column in (("gender", "gender"), ("subject", "subject")):
+        if column in df.columns:
+            g = df.groupby(column)
+            data[f"{key}_labels"] = [str(i) for i in g.size().index]
+            data[f"{key}_avg_grade"] = g["G3"].mean().round(2).tolist()
+            data[f"{key}_pass_rate"] = [_pass_rate(f) for _, f in g]
 
-    # GPA distribution histogram
-    if "gpa" in df.columns:
-        counts, edges = np.histogram(df["gpa"].dropna(), bins=8, range=(0, 4))
-        data["gpa_hist_labels"] = [f"{e:.1f}-{edges[i+1]:.1f}" for i, e in enumerate(edges[:-1])]
-        data["gpa_hist_values"] = counts.tolist()
+    # Pass rate by study time, past failures and higher-education plans
+    if "studytime" in df.columns:
+        g = df.groupby("studytime")
+        data["studytime_labels"] = [STUDYTIME_LABELS.get(int(k), str(k)) for k in g.size().index]
+        data["studytime_pass_rate"] = [_pass_rate(f) for _, f in g]
+    if "failures" in df.columns:
+        g = df.assign(_f=df["failures"].clip(upper=3)).groupby("_f")
+        data["failures_labels"] = [("3+" if int(k) == 3 else str(int(k))) for k in g.size().index]
+        data["failures_pass_rate"] = [_pass_rate(f) for _, f in g]
+    if "higher" in df.columns:
+        g = df.groupby("higher")
+        data["higher_labels"] = [("Wants higher education" if k == "yes" else "Does not") for k in g.size().index]
+        data["higher_pass_rate"] = [_pass_rate(f) for _, f in g]
 
-    # Attendance vs avg_score scatter (sample 50)
-    if "attendance_pct" in df.columns and "avg_score" in df.columns:
-        sample = df[["attendance_pct", "avg_score", "name"]].dropna().head(50)
-        data["scatter_attendance"] = sample["attendance_pct"].tolist()
-        data["scatter_score"] = sample["avg_score"].tolist()
-        data["scatter_names"] = sample["name"].tolist()
+    # Absences vs final grade scatter (fixed random sample keeps the page light)
+    sample = df[["absences", "G3", "name"]].dropna()
+    sample = sample.sample(n=min(250, len(sample)), random_state=1)
+    data["scatter_absences"] = sample["absences"].tolist()
+    data["scatter_grade"] = sample["G3"].tolist()
+    data["scatter_names"] = sample["name"].tolist()
 
-    # Pass/fail by subject threshold
-    if present_subjects and "pass_fail" in df.columns:
-        data["subject_pass_rates"] = {
-            s: round(float((df[s] >= 50).mean() * 100), 1) for s in present_subjects
-        }
-
-    # Class-level improvement indicators (Requirement 3)
-    if "avg_score" in df.columns and "previous_term_avg" in df.columns:
-        improvement = df["avg_score"] - df["previous_term_avg"]
-        data["avg_improvement"] = round(float(improvement.mean()), 2)
-        data["improving_count"] = int((improvement > 2).sum())
-        data["declining_count"] = int((improvement < -2).sum())
-
+    data["avg_improvement"] = round(float(df["progress"].mean()), 2)
+    data["improving_count"] = int((df["progress"] >= 1).sum())
+    data["declining_count"] = int((df["progress"] <= -1).sum())
     return data

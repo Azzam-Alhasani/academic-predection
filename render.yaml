@@ -1,0 +1,21 @@
+# Render Blueprint: deploys the app as a public website.
+# Dashboard -> New -> Blueprint -> pick this repository.
+services:
+  - type: web
+    name: academic-performance-predictor
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # One worker (models are cached in memory and the CSV is written by one process);
+    # threads keep the site responsive while a model trains.
+    startCommand: gunicorn run:app --workers 1 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false   # you type this in the Render dashboard; it is never stored in Git

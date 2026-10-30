@@ -31,11 +31,17 @@ echo "[INFO] Installing dependencies..."
 pip install -r requirements.txt --quiet
 echo "[OK] Dependencies ready."
 
-# Generate sample data if missing
+# Build the real-student dataset if missing (from app/data/raw/*.csv)
 if [ ! -f "app/data/sample_students.csv" ]; then
-    echo "[INFO] Generating sample student data..."
-    python app/data/generate_sample_data.py
-    echo "[OK] Sample data generated."
+    echo "[INFO] Preparing the student dataset..."
+    python app/data/prepare_real_data.py
+    echo "[OK] Dataset ready."
+fi
+
+# Create the admin login on first run (the password is printed once)
+if [ ! -f "app/data/users.csv" ]; then
+    echo "[INFO] Creating the admin login..."
+    python app/data/create_users.py
 fi
 
 echo ""

@@ -21,3 +21,7 @@ app/ml/saved_models/*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Working copy of the dataset (created from sample_students.csv on first start;
+# edits made through the web app are saved here)
+app/data/students.csv
