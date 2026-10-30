@@ -13,6 +13,19 @@
           <p class="text-muted small mb-0">Academic Performance System</p>
         </div>
 
+        {% if dev_hint %}
+        <div class="alert alert-info small py-2">
+          <strong>Development mode.</strong> Default account:
+          <code>{{ dev_hint }}</code> / <code>{{ dev_password }}</code>
+          (only exists on your own computer; it is disabled on a public server).
+        </div>
+        {% elif no_accounts %}
+        <div class="alert alert-warning small py-2">
+          No login account has been set up on this server yet. The site owner must set the
+          <code>ADMIN_PASSWORD</code> environment variable and restart.
+        </div>
+        {% endif %}
+
         <form method="POST" action="{{ url_for('auth.login') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="mb-3">

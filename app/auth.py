@@ -41,6 +41,24 @@ def _safe_next(target: str | None) -> str | None:
     return None
 
 
+DEV_ADMIN_USERNAME = "admin"
+DEV_ADMIN_PASSWORD = "admin123"
+
+
+def has_accounts() -> bool:
+    return not load_users().empty
+
+
+def ensure_dev_admin(app) -> None:
+    """
+    Development only: when no account exists yet, create admin / admin123 so a fresh
+    install can always log in. Never runs in production, where ADMIN_PASSWORD is required.
+    """
+    if app.config.get("DEBUG") and not has_accounts():
+        add_user(DEV_ADMIN_USERNAME, DEV_ADMIN_PASSWORD, role="admin")
+        print(f" * First run: created the development login  {DEV_ADMIN_USERNAME} / {DEV_ADMIN_PASSWORD}")
+
+
 def ensure_admin_from_env() -> None:
     """
     Create the admin account from environment variables when none exists yet.
@@ -134,7 +152,7 @@ def login():
         limit = current_app.config.get("LOGIN_MAX_ATTEMPTS", 5)
         if len(_recent_failures(ip)) >= limit:
             flash("Too many failed attempts. Please wait a few minutes and try again.", "danger")
-            return render_template("login.html"), 429
+            return render_template("login.html", no_accounts=False), 429
 
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
@@ -146,7 +164,12 @@ def login():
         _failed_logins.setdefault(ip, []).append(time.time())
         flash("Invalid username or password.", "danger")
 
-    return render_template("login.html")
+    return render_template(
+        "login.html",
+        dev_hint=current_app.config.get("DEBUG") and DEV_ADMIN_USERNAME or None,
+        dev_password=DEV_ADMIN_PASSWORD,
+        no_accounts=not has_accounts(),
+    )
 
 
 @auth_bp.route("/logout")

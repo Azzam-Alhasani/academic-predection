@@ -53,11 +53,10 @@ Reproduce: `python -m app.ml.export_results` (rewrites `docs/model_results.json`
 python -m venv venv
 source venv/bin/activate        # Windows: .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python app/data/create_users.py # creates the admin login, prints the password once
-python run.py
+python run.py                   # first start creates a local login:  admin / admin123
 ```
 
-Open **http://127.0.0.1:5000**. Or use the launchers (`run.bat` on Windows, `bash run.sh` on macOS/Linux), which do all of the above.
+Open **http://127.0.0.1:5000** and log in with `admin` / `admin123` (this default account is created only on your own computer, never on a public server; change it with `python app/data/create_users.py admin YourNewPassword`). Or use the launchers (`run.bat` on Windows, `bash run.sh` on macOS/Linux), which do all of the above.
 
 Run the tests with `pip install pytest && python -m pytest tests`.
 
@@ -142,7 +141,8 @@ Not covered (future work): a real database, roles beyond admin, rate limiting be
 | `ModuleNotFoundError` | Activate the virtual environment, then `pip install -r requirements.txt` |
 | Blank charts | Allow access to the Bootstrap / Chart.js CDN, or host those files locally |
 | `SECRET_KEY must be set` | Production only: set the `SECRET_KEY` environment variable |
-| Can't log in | Run `python app/data/create_users.py` (local) or set `ADMIN_PASSWORD` (hosted) |
+| Can't log in (local) | Use `admin` / `admin123`, or reset with `python app/data/create_users.py admin NewPassword` |
+| Can't log in (hosted) | Set `ADMIN_PASSWORD` in the host's environment settings and restart the service; username is `admin` |
 | Edits disappeared on the hosted site | Free hosting has a temporary disk; see the hosting notes above |
 | Port 5000 in use | Set the `PORT` environment variable |
 

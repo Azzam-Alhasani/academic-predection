@@ -3,7 +3,8 @@ Flask application factory for the Academic Performance Monitoring & Prediction S
 """
 
 import os
-from flask import Flask, request
+from flask import Flask, flash, redirect, request, url_for
+from werkzeug.exceptions import HTTPException
 from config import get_config
 
 
@@ -16,8 +17,9 @@ def create_app(config_name=None):
     os.makedirs(app.config["MODEL_DIR"], exist_ok=True)
 
     # Optional: create the admin login from ADMIN_PASSWORD (hosts without a shell).
-    from app.auth import ensure_admin_from_env
+    from app.auth import ensure_admin_from_env, ensure_dev_admin
     ensure_admin_from_env()
+    ensure_dev_admin(app)
 
     # Register blueprints
     from app.routes.main import main_bp
@@ -42,7 +44,14 @@ def create_app(config_name=None):
         # Skip CSRF for safe methods (GET/HEAD/OPTIONS). POST is the only
         # state-changing method used by this project's forms.
         if request.method == "POST":
-            validate_csrf()
+            try:
+                validate_csrf()
+            except HTTPException:
+                if request.endpoint == "auth.login":
+                    # Usually an expired page or blocked cookies: explain instead of a bare 400.
+                    flash("Your session expired or cookies are blocked. Please try signing in again.", "warning")
+                    return redirect(url_for("auth.login"))
+                raise
 
     # ── Template helpers (available in every template) ───────
     from app.security import get_csrf_token

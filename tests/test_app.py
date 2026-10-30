@@ -86,3 +86,33 @@ def test_open_redirect_is_blocked(client):
     token = _csrf(client)
     r = client.post("/auth/login?next=//evil.example", data={"csrf_token": token, "username": "admin", "password": "correct-horse"})
     assert "evil.example" not in r.headers["Location"]
+
+
+def _login(client, username, password):
+    token = _csrf(client)
+    return client.post("/auth/login", data={"csrf_token": token, "username": username, "password": password})
+
+
+def test_fresh_dev_install_can_log_in(tmp_path, monkeypatch):
+    """A brand-new install (no users.csv) must still be usable locally."""
+    monkeypatch.setattr(auth, "_users_file", lambda: str(tmp_path / "users.csv"))
+    app = create_app("development")
+    c = app.test_client()
+    assert b"admin123" in c.get("/auth/login").data            # login page tells you the dev account
+    assert _login(c, "admin", "admin123").status_code == 302
+    assert c.get("/recommendations/").status_code == 200
+
+
+def test_production_never_gets_a_default_account(tmp_path, monkeypatch):
+    monkeypatch.setattr(auth, "_users_file", lambda: str(tmp_path / "users.csv"))
+    monkeypatch.setattr("config.ProductionConfig.SECRET_KEY", "x" * 40)
+    monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+    app = create_app("production")
+    c = app.test_client()
+    assert _login(c, "admin", "admin123").status_code == 200   # rejected, stays on the login page
+    assert b"ADMIN_PASSWORD" in c.get("/auth/login").data       # tells the owner what is missing
+
+
+def test_expired_session_on_login_is_explained(client):
+    r = client.post("/auth/login", data={"username": "admin", "password": "x"}, follow_redirects=True)
+    assert b"session expired" in r.data
