@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }}{% endblock %}
+{% block page_title %}Student Profile{% endblock %}
+
+{% block content %}
+<div class="row g-4 mt-1">
+
+  <!-- ── Profile Header Card ──────────────────────────────── -->
+  <div class="col-12">
+    <div class="card profile-header-card">
+      <div class="card-body d-flex align-items-center gap-4 flex-wrap">
+        <div class="avatar-circle">
+          {{ student.name[0] | upper }}
+        </div>
+        <div class="flex-grow-1">
+          <h4 class="mb-1 fw-bold">{{ student.name }}</h4>
+          <div class="d-flex gap-3 flex-wrap text-muted small">
+            <span><i class="fa-solid fa-id-badge me-1"></i>ID: {{ student.student_id }}</span>
+            <span><i class="fa-solid fa-venus-mars me-1"></i>{{ student.gender }}</span>
+            <span><i class="fa-solid fa-cake-candles me-1"></i>Age {{ student.age }}</span>
+            <span><i class="fa-solid fa-calendar-check me-1"></i>Attendance: {{ student.attendance_pct }}%</span>
+          </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <span class="badge fs-5 px-3 py-2 grade-badge grade-{{ student.grade_letter }}">
+            Grade {{ student.grade_letter }}
+          </span>
+          {% if student.pass_fail == 1 %}
+            <span class="badge bg-success fs-6 px-3 py-2"><i class="fa-solid fa-circle-check me-1"></i>Pass</span>
+          {% else %}
+            <span class="badge bg-danger fs-6 px-3 py-2"><i class="fa-solid fa-circle-xmark me-1"></i>Fail</span>
+          {% endif %}
+          {% if student.at_risk == 1 %}
+            <span class="badge bg-warning text-dark fs-6 px-3 py-2">
+              <i class="fa-solid fa-triangle-exclamation me-1"></i>At-Risk
+            </span>
+          {% endif %}
+        </div>
+        <div class="ms-auto d-flex gap-2">
+          <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editModal">
+            <i class="fa-solid fa-pen me-1"></i>Edit
+          </button>
+          <a href="{{ url_for('students.student_list') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i>Back
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Stats Row ─────────────────────────────────────────── -->
+  <div class="col-6 col-md-3">
+    <div class="card stat-card text-center">
+      <div class="card-body">
+        <div class="stat-value text-primary">{{ student.avg_score }}</div>
+        <div class="stat-label">Average Score</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card text-center">
+      <div class="card-body">
+        <div class="stat-value text-info">{{ student.gpa }}</div>
+        <div class="stat-label">GPA</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card text-center">
+      <div class="card-body">
+        <div class="stat-value text-success">{{ student.study_hours_per_week }}h</div>
+        <div class="stat-label">Study Hours/Week</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card text-center">
+      <div class="card-body">
+        <div class="stat-value text-warning">{{ student.assignments_submitted }}/12</div>
+        <div class="stat-label">Assignments</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Performance Trend Card ────────────────────────────── -->
+  <div class="col-12 col-md-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-arrow-trend-up text-primary"></i>
+        <span class="fw-semibold">Performance Trend</span>
+      </div>
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="stat-value
+            {{ 'text-success' if indicators.improvement > 0 else 'text-danger' if indicators.improvement < 0 else 'text-muted' }}">
+            {{ '%+.2f' | format(indicators.improvement) }}
+          </div>
+          <span class="badge
+            {{ 'bg-success' if indicators.trend == 'Improving' else 'bg-danger' if indicators.trend == 'Declining' else 'bg-secondary' }}">
+            {{ indicators.trend }}
+          </span>
+        </div>
+        <p class="text-muted small mb-2">
+          Current average {{ indicators.avg_score }} vs previous term {{ indicators.previous_term_avg }}.
+        </p>
+        <div class="mb-2">
+          <span class="text-muted small">Weak subjects:</span>
+          {% if indicators.weak_subjects %}
+            {% for s in indicators.weak_subjects %}<span class="badge bg-warning text-dark me-1">{{ s|title }}</span>{% endfor %}
+          {% else %}
+            <span class="badge bg-success me-1">None</span>
+          {% endif %}
+        </div>
+        <div>
+          <span class="text-muted small">Strongest subject:</span>
+          <span class="badge bg-info text-dark">{{ indicators.strongest_subject|title if indicators.strongest_subject else '—' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Recommendations Card ──────────────────────────────── -->
+  <div class="col-12 col-md-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-lightbulb text-warning"></i>
+        <span class="fw-semibold">Recommendations</span>
+      </div>
+      <div class="card-body">
+        <ul class="mb-0 small">
+          {% for tip in recommendations %}
+          <li class="mb-2">{{ tip }}</li>
+          {% else %}
+          <li class="text-muted">No recommendations available.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Subject Radar Chart ───────────────────────────────── -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-chart-pie text-primary"></i>
+        <span class="fw-semibold">Subject Performance</span>
+      </div>
+      <div class="card-body chart-wrapper">
+        <canvas id="subjectRadar"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Score Breakdown Bar ───────────────────────────────── -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-bars text-success"></i>
+        <span class="fw-semibold">Score Breakdown</span>
+      </div>
+      <div class="card-body chart-wrapper">
+        <canvas id="scoreBar"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Score Subjects Table ──────────────────────────────── -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-table text-info"></i>
+        <span class="fw-semibold">Detailed Scores</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead><tr><th>Subject</th><th>Score</th><th>Grade</th><th>Progress</th></tr></thead>
+            <tbody>
+              {% for subj in ['math','science','english','history','cs'] %}
+              {% set score = student[subj] %}
+              {% set grade = 'A' if score >= 90 else 'B' if score >= 80 else 'C' if score >= 70 else 'D' if score >= 60 else 'F' %}
+              <tr>
+                <td class="fw-semibold text-capitalize">{{ subj }}</td>
+                <td>{{ score }}</td>
+                <td><span class="badge grade-badge grade-{{ grade }}">{{ grade }}</span></td>
+                <td style="width:40%">
+                  <div class="progress" style="height:8px;">
+                    <div class="progress-bar bg-{{ 'success' if score >= 70 else 'warning' if score >= 50 else 'danger' }}"
+                         style="width:{{ score }}%"></div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Edit Student Modal ──────────────────────────────────── -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-pen me-2 text-primary"></i>Edit Student</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('students.student_edit', student_id=student.student_id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Full Name</label>
+              <input type="text" name="name" class="form-control" value="{{ student.name }}" required />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Gender</label>
+              <select name="gender" class="form-select">
+                <option value="Male" {{ 'selected' if student.gender=='Male' }}>Male</option>
+                <option value="Female" {{ 'selected' if student.gender=='Female' }}>Female</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Age</label>
+              <input type="number" name="age" class="form-control" value="{{ student.age }}" min="10" max="30" required />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Attendance %</label>
+              <input type="number" name="attendance_pct" class="form-control" value="{{ student.attendance_pct }}" min="0" max="100" step="0.1" required />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Study Hours/Week</label>
+              <input type="number" name="study_hours_per_week" class="form-control" value="{{ student.study_hours_per_week }}" min="0" max="20" step="0.5" required />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Assignments Submitted</label>
+              <input type="number" name="assignments_submitted" class="form-control" value="{{ student.assignments_submitted }}" min="0" max="12" required />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Previous GPA</label>
+              <input type="number" name="previous_gpa" class="form-control" value="{{ student.previous_gpa }}" min="0" max="4" step="0.01" required />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Previous Term Avg</label>
+              <input type="number" name="previous_term_avg" class="form-control" value="{{ student.previous_term_avg }}" min="0" max="100" step="0.1" required />
+            </div>
+            <div class="col-12"><hr class="my-1" /><p class="form-label mb-2 fw-semibold">Subject Scores</p></div>
+            {% for subj in ['math','science','english','history','cs'] %}
+            <div class="col-md-4 col-lg-2" style="flex:1;">
+              <label class="form-label text-capitalize">{{ subj }}</label>
+              <input type="number" name="{{ subj }}" class="form-control" value="{{ student[subj] }}" min="0" max="100" required />
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-1"></i>Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const subjects = ['Math', 'Science', 'English', 'History', 'CS'];
+const scores = [
+  {{ student.math }},
+  {{ student.science }},
+  {{ student.english }},
+  {{ student.history }},
+  {{ student.cs }}
+];
+
+// Radar
+new Chart(document.getElementById('subjectRadar').getContext('2d'), {
+  type: 'radar',
+  data: {
+    labels: subjects,
+    datasets: [{
+      label: '{{ student.name }}',
+      data: scores,
+      backgroundColor: 'rgba(13,202,240,0.2)',
+      borderColor: '#0dcaf0',
+      pointBackgroundColor: '#0dcaf0',
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: { r: { suggestedMin: 0, suggestedMax: 100 } }
+  }
+});
+
+// Bar
+new Chart(document.getElementById('scoreBar').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: subjects,
+    datasets: [{
+      label: 'Score',
+      data: scores,
+      backgroundColor: scores.map(s => s >= 70 ? '#198754' : s >= 50 ? '#ffc107' : '#dc3545'),
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, max: 100 } }
+  }
+});
+</script>
+{% endblock %}

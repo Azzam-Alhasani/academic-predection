@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block page_title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-center mb-4">
+          <i class="fa-solid fa-graduation-cap fa-2x text-primary mb-2"></i>
+          <h4 class="fw-bold mb-1">Sign in</h4>
+          <p class="text-muted small mb-0">Academic Performance System</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.login') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input type="text" name="username" class="form-control" autofocus required />
+          </div>
+          <div class="mb-4">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" required />
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fa-solid fa-right-to-bracket me-2"></i>Login
+          </button>
+        </form>
+
+        <p class="text-muted small text-center mt-3 mb-0">
+          Access to add / edit student records requires an account.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

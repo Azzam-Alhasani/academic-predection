@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block page_title %}Performance Analytics{% endblock %}
+
+{% block content %}
+<div class="row g-4 mt-1">
+
+  <!-- ── Top Performers ────────────────────────────────────── -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-trophy text-warning"></i>
+        <span class="fw-semibold">Top 5 Performers</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>#</th><th>Name</th><th>Avg Score</th><th>Grade</th></tr></thead>
+          <tbody>
+            {% for s in data.get('top_performers', []) %}
+            <tr>
+              <td>
+                {% if loop.index0 == 0 %}<i class="fa-solid fa-medal text-warning"></i>
+                {% elif loop.index0 == 1 %}<i class="fa-solid fa-medal text-secondary"></i>
+                {% elif loop.index0 == 2 %}<i class="fa-solid fa-medal" style="color:#cd7f32;"></i>
+                {% else %}{{ loop.index }}{% endif %}
+              </td>
+              <td class="fw-semibold">{{ s.name }}</td>
+              <td>{{ s.avg_score }}</td>
+              <td><span class="badge grade-badge grade-{{ s.grade_letter }}">{{ s.grade_letter }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Bottom Performers ─────────────────────────────────── -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-arrow-trend-down text-danger"></i>
+        <span class="fw-semibold">Needs Attention (Bottom 5)</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>#</th><th>Name</th><th>Avg Score</th><th>Grade</th></tr></thead>
+          <tbody>
+            {% for s in data.get('bottom_performers', []) %}
+            <tr>
+              <td class="text-danger fw-bold">{{ loop.index }}</td>
+              <td class="fw-semibold">{{ s.name }}</td>
+              <td class="text-danger">{{ s.avg_score }}</td>
+              <td><span class="badge grade-badge grade-{{ s.grade_letter }}">{{ s.grade_letter }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GPA Distribution ──────────────────────────────────── -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-chart-column text-info"></i>
+        <span class="fw-semibold">GPA Distribution</span>
+      </div>
+      <div class="card-body chart-wrapper">
+        <canvas id="gpaHistChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Subject Pass Rates ─────────────────────────────────── -->
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-percent text-success"></i>
+        <span class="fw-semibold">Subject Pass Rates (%)</span>
+      </div>
+      <div class="card-body chart-wrapper">
+        <canvas id="subjectPassChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Gender Subject Comparison ───────────────────────────── -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-venus-mars text-primary"></i>
+        <span class="fw-semibold">Subject Performance by Gender</span>
+      </div>
+      <div class="card-body chart-wrapper" style="max-height:350px;">
+        <canvas id="genderSubjectChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Attendance vs Score Scatter ──────────────────────────── -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-circle-dot text-warning"></i>
+        <span class="fw-semibold">Attendance vs Average Score</span>
+      </div>
+      <div class="card-body chart-wrapper" style="max-height:350px;">
+        <canvas id="attendanceScatterChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const d = {{ data_json | safe }};
+
+// GPA Histogram
+new Chart(document.getElementById('gpaHistChart').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: d.gpa_hist_labels || [],
+    datasets: [{ label: 'Students', data: d.gpa_hist_values || [], backgroundColor: '#0dcaf0', borderRadius: 5 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+});
+
+// Subject Pass Rates
+const passRates = d.subject_pass_rates || {};
+new Chart(document.getElementById('subjectPassChart').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(passRates).map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+    datasets: [{
+      label: 'Pass Rate %',
+      data: Object.values(passRates),
+      backgroundColor: Object.values(passRates).map(v => v >= 70 ? '#198754' : v >= 50 ? '#ffc107' : '#dc3545'),
+      borderRadius: 5,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, max: 100 } }
+  }
+});
+
+// Gender Subject Grouped Bar
+const colors = ['rgba(13,110,253,0.8)', 'rgba(220,53,69,0.8)'];
+const genderSubDatasets = (d.gender_labels || []).map((g, i) => ({
+  label: g,
+  data: (d.subject_names || []).map(s => (d.gender_subject_data || {})[s]?.[i] || 0),
+  backgroundColor: colors[i % colors.length],
+  borderRadius: 4,
+}));
+new Chart(document.getElementById('genderSubjectChart').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: (d.subject_names || []).map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+    datasets: genderSubDatasets,
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: { y: { beginAtZero: true, max: 100 } }
+  }
+});
+
+// Attendance Scatter
+new Chart(document.getElementById('attendanceScatterChart').getContext('2d'), {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      label: 'Students',
+      data: (d.scatter_attendance || []).map((att, i) => ({ x: att, y: (d.scatter_score || [])[i] })),
+      backgroundColor: 'rgba(255,193,7,0.7)',
+      pointRadius: 5,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { title: { display: true, text: 'Attendance %' } },
+      y: { title: { display: true, text: 'Average Score' }, suggestedMin: 0, suggestedMax: 100 }
+    }
+  }
+});
+</script>
+{% endblock %}

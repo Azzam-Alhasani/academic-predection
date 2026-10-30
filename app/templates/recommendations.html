@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Recommendations{% endblock %}
+{% block page_title %}Recommendations & Bayesian Analysis{% endblock %}
+
+{% block content %}
+<div class="row g-4 mt-1">
+
+  <!-- ── Bayes' Theorem explained + table ──────────────────── -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-square-root-variable text-primary"></i>
+        <span class="fw-semibold">Bayesian Analysis of Pass/Fail</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Bayes' Theorem updates the probability of passing as new evidence arrives:
+          <span class="text-white font-monospace">P(Pass | Evidence) = P(Evidence | Pass) × P(Pass) / P(Evidence)</span>.
+          The table below is computed directly from the current student records (counts), not from a
+          machine-learning model, so you can trace every number.
+        </p>
+
+        {% if bayes.prior_pass is not none %}
+        <div class="mb-4">
+          <div class="metric-chip d-inline-flex">
+            <div class="metric-chip-label">P(Pass) prior</div>
+            <div class="metric-chip-value text-success">{{ (bayes.prior_pass * 100) | round(1) }}%</div>
+          </div>
+          <span class="text-muted small ms-2">Base rate of passing across the whole class.</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm mb-4">
+            <thead>
+              <tr>
+                <th>Evidence type</th>
+                <th>Evidence</th>
+                <th>P(Evidence | Pass)</th>
+                <th>P(Evidence)</th>
+                <th>P(Pass | Evidence)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in bayes.by_evidence %}
+              <tr>
+                <td>{{ row.evidence_type }}</td>
+                <td class="fw-semibold">{{ row.evidence }}</td>
+                <td>{{ (row.p_evidence_given_pass * 100) | round(1) }}%</td>
+                <td>{{ (row.p_evidence * 100) | round(1) }}%</td>
+                <td class="text-success fw-semibold">{{ (row.p_pass_given_evidence * 100) | round(1) }}%</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <h6 class="text-muted mb-2"><i class="fa-solid fa-calculator me-1"></i>Worked example</h6>
+        {% for ex in bayes.worked_examples %}
+        <div class="alert alert-secondary py-2 small mb-2">
+          <strong>{{ ex.evidence_type }}:</strong> for evidence "{{ ex.evidence }}",
+          <div class="font-monospace mt-1">
+            {% for line in ex.formula_lines %}
+            <div>{{ line }}</div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center text-muted py-3">Not enough data to compute Bayesian probabilities.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Per-student recommendations ───────────────────────── -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-lightbulb text-warning"></i>
+        <span class="fw-semibold">Personalized Recommendations</span>
+        <span class="badge bg-secondary ms-auto">{{ rows|length }} student(s)</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Avg</th>
+                <th>Prev</th>
+                <th>Change</th>
+                <th>Trend</th>
+                <th>Weak subjects</th>
+                <th>Key recommendation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+              <tr>
+                <td class="fw-semibold">{{ row.name }}</td>
+                <td>{{ row.avg_score }}</td>
+                <td>{{ row.previous_term_avg }}</td>
+                <td class="{{ 'text-success' if row.improvement > 0 else 'text-danger' if row.improvement < 0 else 'text-muted' }}">
+                  {{ '%+.2f' | format(row.improvement) }}
+                </td>
+                <td>
+                  {% if row.trend == 'Improving' %}
+                    <span class="badge bg-success">Improving</span>
+                  {% elif row.trend == 'Declining' %}
+                    <span class="badge bg-danger">Declining</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Stable</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if row.weak_subjects %}
+                    {% for s in row.weak_subjects %}<span class="badge bg-warning text-dark me-1">{{ s|title }}</span>{% endfor %}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="small text-muted">{{ row.recommendations[0] if row.recommendations else '—' }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="7" class="text-center text-muted py-4">No student data available.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
