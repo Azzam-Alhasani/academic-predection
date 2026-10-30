@@ -1,1 +1,23 @@
-*
+# Virtual environments
+venv/
+.venv/
+env/
+pyvenv.cfg
+
+# Python
+__pycache__/
+*.pyc
+
+# Local config and secrets
+.env
+
+# Local login accounts (create with: python app/data/create_users.py)
+app/data/users.csv
+
+# Trained model cache
+app/ml/saved_models/*
+!app/ml/saved_models/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db

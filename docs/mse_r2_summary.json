@@ -1,0 +1,24 @@
+{
+  "linear_regression": {
+    "mse": 28.71205310847282,
+    "r2": 0.7538626728695512
+  },
+  "logistic_regression": {
+    "mse_labels": 0.03,
+    "r2_labels": -0.53061224489796,
+    "mse_prob": 0.020547647065037658,
+    "r2_prob": -0.048349340052942225
+  },
+  "random_forest": {
+    "mse_labels": 0.04,
+    "r2_labels": -1.0408163265306132,
+    "mse_prob": 0.020621,
+    "r2_prob": -0.05209183673469431
+  },
+  "decision_tree": {
+    "mse_labels": 0.05,
+    "r2_labels": -1.5510204081632666,
+    "mse_prob": 0.05,
+    "r2_prob": -1.5510204081632666
+  }
+}
