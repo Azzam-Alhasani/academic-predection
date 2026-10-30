@@ -15,6 +15,10 @@ def create_app(config_name=None):
     # Ensure required directories exist
     os.makedirs(app.config["MODEL_DIR"], exist_ok=True)
 
+    # Optional: create the admin login from ADMIN_PASSWORD (hosts without a shell).
+    from app.auth import ensure_admin_from_env
+    ensure_admin_from_env()
+
     # Register blueprints
     from app.routes.main import main_bp
     from app.routes.students import students_bp
@@ -50,5 +54,20 @@ def create_app(config_name=None):
             "csrf_token": get_csrf_token,
             "current_user": current_user(),
         }
+
+    # ── Public hosting: trust the host's reverse proxy for client IP / HTTPS ──
+    if app.config.get("BEHIND_PROXY"):
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+    # ── Basic security headers ───────────────────────────────
+    @app.after_request
+    def _security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        if app.config.get("SESSION_COOKIE_SECURE"):
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+        return response
 
     return app

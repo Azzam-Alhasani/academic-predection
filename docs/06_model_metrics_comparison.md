@@ -1,3 +1,5 @@
+> **Note:** this document was written for an earlier version of the project that used generated sample data. The application now uses the real UCI Student Performance dataset; see the main [README](../README.md) for current data, results and deployment steps. Figures and charts below may be out of date.
+
 ## Machine Learning Models & Metrics
 
 This document summarizes the machine learning models implemented in this project, the exact metrics the code computes, and guidance for comparing models.

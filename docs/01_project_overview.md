@@ -1,3 +1,5 @@
+> **Note:** this document was written for an earlier version of the project that used generated sample data. The application now uses the real UCI Student Performance dataset; see the main [README](../README.md) for current data, results and deployment steps. Figures and charts below may be out of date.
+
 # 01 — Project Overview
 
 ## Academic Performance Monitoring & Prediction System (APMS)

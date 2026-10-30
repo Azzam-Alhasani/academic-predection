@@ -41,11 +41,17 @@ if %ERRORLEVEL% neq 0 (
 )
 echo [OK] Dependencies ready.
 
-REM Generate sample data if not present
+REM Build the real-student dataset if missing (from app\data\raw\*.csv)
 if not exist "app\data\sample_students.csv" (
-    echo [INFO] Generating sample student data...
-    python app\data\generate_sample_data.py
-    echo [OK] Sample data generated.
+    echo [INFO] Preparing the student dataset...
+    python app\data\prepare_real_data.py
+    echo [OK] Dataset ready.
+)
+
+REM Create the admin login on first run (the password is printed once)
+if not exist "app\data\users.csv" (
+    echo [INFO] Creating the admin login...
+    python app\data\create_users.py
 )
 
 echo.

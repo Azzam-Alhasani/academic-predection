@@ -3,154 +3,144 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
+{% set rate = stats.get('pass_rate', 0) %}
 <div class="row g-4 mt-1">
+
+  <div class="col-12">
+    <div class="alert alert-secondary mb-0 small">
+      <i class="fa-solid fa-database me-1"></i>
+      Real data: the UCI <strong>Student Performance</strong> dataset (Cortez &amp; Silva, 2008), with
+      Math and Portuguese records from two Portuguese secondary schools. Grades are on a 0&ndash;20 scale
+      and a student passes with a final grade (G3) of 10 or more.
+    </div>
+  </div>
 
   <!-- ── KPI Cards ──────────────────────────────────────────── -->
   <div class="col-6 col-md-4 col-xl-2">
-    <div class="card stat-card h-100">
-      <div class="card-body">
-        <div class="stat-icon bg-primary-subtle text-primary"><i class="fa-solid fa-users"></i></div>
-        <div class="stat-value">{{ stats.get('total_students', 0) }}</div>
-        <div class="stat-label">Total Students</div>
-      </div>
-    </div>
+    <div class="card stat-card h-100"><div class="card-body">
+      <div class="stat-icon bg-primary-subtle text-primary"><i class="fa-solid fa-users"></i></div>
+      <div class="stat-value">{{ stats.get('total_students', 0) }}</div>
+      <div class="stat-label">Student Records</div>
+    </div></div>
   </div>
-
   <div class="col-6 col-md-4 col-xl-2">
-    <div class="card stat-card h-100">
-      <div class="card-body">
-        <div class="stat-icon bg-success-subtle text-success"><i class="fa-solid fa-circle-check"></i></div>
-        <div class="stat-value text-success">{{ stats.get('pass_count', 0) }}</div>
-        <div class="stat-label">Passed</div>
-      </div>
-    </div>
+    <div class="card stat-card h-100"><div class="card-body">
+      <div class="stat-icon bg-success-subtle text-success"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="stat-value text-success">{{ stats.get('pass_count', 0) }}</div>
+      <div class="stat-label">Passed</div>
+    </div></div>
   </div>
-
   <div class="col-6 col-md-4 col-xl-2">
-    <div class="card stat-card h-100">
-      <div class="card-body">
-        <div class="stat-icon bg-danger-subtle text-danger"><i class="fa-solid fa-circle-xmark"></i></div>
-        <div class="stat-value text-danger">{{ stats.get('fail_count', 0) }}</div>
-        <div class="stat-label">Failed</div>
-      </div>
-    </div>
+    <div class="card stat-card h-100"><div class="card-body">
+      <div class="stat-icon bg-danger-subtle text-danger"><i class="fa-solid fa-circle-xmark"></i></div>
+      <div class="stat-value text-danger">{{ stats.get('fail_count', 0) }}</div>
+      <div class="stat-label">Failed</div>
+    </div></div>
   </div>
-
   <div class="col-6 col-md-4 col-xl-2">
-    <div class="card stat-card h-100">
-      <div class="card-body">
-        <div class="stat-icon bg-info-subtle text-info"><i class="fa-solid fa-star"></i></div>
-        <div class="stat-value">{{ stats.get('avg_gpa', 0) }}</div>
-        <div class="stat-label">Average GPA</div>
-      </div>
-    </div>
+    <div class="card stat-card h-100"><div class="card-body">
+      <div class="stat-icon bg-info-subtle text-info"><i class="fa-solid fa-star"></i></div>
+      <div class="stat-value">{{ stats.get('avg_grade', 0) }}<small class="text-muted fs-6"> /20</small></div>
+      <div class="stat-label">Average Final Grade</div>
+    </div></div>
   </div>
-
   <div class="col-6 col-md-4 col-xl-2">
-    <div class="card stat-card h-100">
-      <div class="card-body">
-        <div class="stat-icon bg-warning-subtle text-warning"><i class="fa-solid fa-triangle-exclamation"></i></div>
-        <div class="stat-value text-warning">{{ stats.get('at_risk_count', 0) }}</div>
-        <div class="stat-label">At-Risk</div>
-      </div>
-    </div>
+    <div class="card stat-card h-100"><div class="card-body">
+      <div class="stat-icon bg-warning-subtle text-warning"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div class="stat-value text-warning">{{ stats.get('at_risk_count', 0) }}</div>
+      <div class="stat-label">At-Risk</div>
+    </div></div>
   </div>
-
   <div class="col-6 col-md-4 col-xl-2">
-    <div class="card stat-card h-100">
-      <div class="card-body">
-        <div class="stat-icon bg-secondary-subtle text-secondary"><i class="fa-solid fa-calendar-check"></i></div>
-        <div class="stat-value">{{ stats.get('avg_attendance', 0) }}%</div>
-        <div class="stat-label">Avg Attendance</div>
-      </div>
-    </div>
+    <div class="card stat-card h-100"><div class="card-body">
+      <div class="stat-icon bg-secondary-subtle text-secondary"><i class="fa-solid fa-calendar-xmark"></i></div>
+      <div class="stat-value">{{ stats.get('avg_absences', 0) }}</div>
+      <div class="stat-label">Avg Absences</div>
+    </div></div>
   </div>
 
-  <!-- ── Pass Rate Progress Bar ────────────────────────────── -->
+  <!-- ── Pass Rate ─────────────────────────────────────────── -->
   <div class="col-12">
-    <div class="card">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <span class="fw-semibold">Overall Pass Rate</span>
-          <span class="badge bg-{{ 'success' if stats.get('pass_rate',0) >= 70 else 'warning' if stats.get('pass_rate',0) >= 50 else 'danger' }} fs-6">
-            {{ stats.get('pass_rate', 0) }}%
-          </span>
-        </div>
-        <div class="progress" style="height:12px;">
-          <div class="progress-bar bg-{{ 'success' if stats.get('pass_rate',0) >= 70 else 'warning' if stats.get('pass_rate',0) >= 50 else 'danger' }}"
-               style="width: {{ stats.get('pass_rate', 0) }}%"></div>
-        </div>
+    <div class="card"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-semibold">Overall Pass Rate</span>
+        <span class="badge bg-{{ 'success' if rate >= 70 else 'warning' if rate >= 50 else 'danger' }} fs-6">{{ rate }}%</span>
       </div>
-    </div>
+      <div class="progress" style="height:12px;">
+        <div class="progress-bar bg-{{ 'success' if rate >= 70 else 'warning' if rate >= 50 else 'danger' }}"
+             style="width: {{ rate }}%"></div>
+      </div>
+    </div></div>
   </div>
 
-  <!-- ── Class Improvement Summary ─────────────────────────── -->
+  <!-- ── Progress G2 -> G3 ─────────────────────────────────── -->
   <div class="col-12 col-md-4">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="stat-icon bg-info-subtle text-info"><i class="fa-solid fa-arrow-trend-up"></i></div>
-        <div class="stat-value {{ 'text-success' if stats.get('avg_improvement',0) > 0 else 'text-danger' }}">
-          {{ '%+.2f' | format(stats.get('avg_improvement', 0)) }}
-        </div>
-        <div class="stat-label">Avg Score Change vs Last Term</div>
+    <div class="card h-100"><div class="card-body">
+      <div class="stat-icon bg-info-subtle text-info"><i class="fa-solid fa-arrow-trend-up"></i></div>
+      <div class="stat-value {{ 'text-success' if stats.get('avg_improvement',0) > 0 else 'text-danger' }}">
+        {{ '%+.2f' | format(stats.get('avg_improvement', 0)) }}
       </div>
-    </div>
+      <div class="stat-label">Avg Grade Change (G2 &rarr; G3)</div>
+    </div></div>
   </div>
   <div class="col-12 col-md-4">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="stat-icon bg-success-subtle text-success"><i class="fa-solid fa-circle-up"></i></div>
-        <div class="stat-value text-success">{{ stats.get('improving_count', 0) }}</div>
-        <div class="stat-label">Students Improving</div>
-      </div>
-    </div>
+    <div class="card h-100"><div class="card-body">
+      <div class="stat-icon bg-success-subtle text-success"><i class="fa-solid fa-circle-up"></i></div>
+      <div class="stat-value text-success">{{ stats.get('improving_count', 0) }}</div>
+      <div class="stat-label">Students Improving (+1 or more)</div>
+    </div></div>
   </div>
   <div class="col-12 col-md-4">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="stat-icon bg-danger-subtle text-danger"><i class="fa-solid fa-circle-down"></i></div>
-        <div class="stat-value text-danger">{{ stats.get('declining_count', 0) }}</div>
-        <div class="stat-label">Students Declining</div>
-      </div>
-    </div>
+    <div class="card h-100"><div class="card-body">
+      <div class="stat-icon bg-danger-subtle text-danger"><i class="fa-solid fa-circle-down"></i></div>
+      <div class="stat-value text-danger">{{ stats.get('declining_count', 0) }}</div>
+      <div class="stat-label">Students Declining (-1 or more)</div>
+    </div></div>
   </div>
 
-  <!-- ── Grade Distribution Chart ──────────────────────────── -->
+  <!-- ── Charts ────────────────────────────────────────────── -->
   <div class="col-12 col-lg-6">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-chart-bar text-primary"></i>
-        <span class="fw-semibold">Grade Distribution</span>
+        <i class="fa-solid fa-chart-bar text-primary"></i><span class="fw-semibold">Grade Distribution (final grade)</span>
       </div>
-      <div class="card-body chart-wrapper">
-        <canvas id="gradeDistChart"></canvas>
-      </div>
+      <div class="card-body chart-wrapper"><canvas id="gradeDistChart"></canvas></div>
     </div>
   </div>
-
-  <!-- ── Subject Averages Chart ─────────────────────────────── -->
   <div class="col-12 col-lg-6">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-book text-info"></i>
-        <span class="fw-semibold">Subject Averages</span>
+        <i class="fa-solid fa-book text-info"></i><span class="fw-semibold">Average Grade by Period</span>
       </div>
-      <div class="card-body chart-wrapper">
-        <canvas id="subjectAvgChart"></canvas>
-      </div>
+      <div class="card-body chart-wrapper"><canvas id="periodChart"></canvas></div>
     </div>
   </div>
 
-  <!-- ── Study Hours vs Score Trend ────────────────────────── -->
-  <div class="col-12">
-    <div class="card">
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
       <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-chart-line text-success"></i>
-        <span class="fw-semibold">Study Hours vs Average Score</span>
+        <i class="fa-solid fa-language text-warning"></i><span class="fw-semibold">Math vs Portuguese</span>
       </div>
-      <div class="card-body chart-wrapper">
-        <canvas id="studyTrendChart"></canvas>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Subject</th><th>Students</th><th>Avg Final Grade</th><th>Pass Rate</th></tr></thead>
+            <tbody>
+              {% for name, s in stats.get('subject_summary', {}).items() %}
+              <tr><td class="fw-semibold">{{ name }}</td><td>{{ s.students }}</td><td>{{ s.avg_grade }}</td><td>{{ s.pass_rate }}%</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="fa-solid fa-chart-line text-success"></i><span class="fw-semibold">Weekly Study Time vs Average Final Grade</span>
+      </div>
+      <div class="card-body chart-wrapper"><canvas id="studyTrendChart"></canvas></div>
     </div>
   </div>
 
@@ -159,15 +149,13 @@
 
 {% block scripts %}
 <script>
-const stats = {{ stats_json | safe }};
+const stats = {{ stats | tojson }};
 
-// Grade Distribution Bar Chart
-const gradeCtx = document.getElementById('gradeDistChart').getContext('2d');
 const gradeDist = stats.grade_distribution || {};
-new Chart(gradeCtx, {
+new Chart(document.getElementById('gradeDistChart'), {
   type: 'bar',
   data: {
-    labels: ['A', 'B', 'C', 'D', 'F'],
+    labels: ['A', 'B', 'C', 'D (pass)', 'F'],
     datasets: [{
       label: 'Students',
       data: ['A','B','C','D','F'].map(g => gradeDist[g] || 0),
@@ -175,54 +163,38 @@ new Chart(gradeCtx, {
       borderRadius: 6,
     }]
   },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-  }
+  options: { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
 });
 
-// Subject Averages Radar Chart
-const subCtx = document.getElementById('subjectAvgChart').getContext('2d');
-const subAvg = stats.subject_averages || {};
-new Chart(subCtx, {
-  type: 'radar',
+const periods = stats.period_averages || {};
+new Chart(document.getElementById('periodChart'), {
+  type: 'bar',
   data: {
-    labels: Object.keys(subAvg).map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+    labels: ['G1 (period 1)', 'G2 (period 2)', 'G3 (final)'],
     datasets: [{
-      label: 'Class Average',
-      data: Object.values(subAvg),
-      backgroundColor: 'rgba(13,110,253,0.2)',
-      borderColor: '#0d6efd',
-      pointBackgroundColor: '#0d6efd',
+      label: 'Average grade (0-20)',
+      data: [periods.G1, periods.G2, periods.G3],
+      backgroundColor: ['#0d6efd99', '#0d6efdcc', '#0d6efd'],
+      borderRadius: 6,
     }]
   },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    scales: { r: { suggestedMin: 0, suggestedMax: 100 } }
-  }
+  options: { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 20 } } }
 });
 
-// Study Trend Line Chart
-const trendCtx = document.getElementById('studyTrendChart').getContext('2d');
-new Chart(trendCtx, {
+new Chart(document.getElementById('studyTrendChart'), {
   type: 'line',
   data: {
     labels: stats.study_trend_labels || [],
     datasets: [{
-      label: 'Avg Score',
+      label: 'Avg final grade',
       data: stats.study_trend_values || [],
-      borderColor: '#198754',
-      backgroundColor: 'rgba(25,135,84,0.15)',
-      fill: true,
-      tension: 0.4,
-      pointBackgroundColor: '#198754',
+      borderColor: '#198754', backgroundColor: 'rgba(25,135,84,0.15)',
+      fill: true, tension: 0.3, pointBackgroundColor: '#198754',
     }]
   },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    scales: { y: { suggestedMin: 0, suggestedMax: 100 } }
-  }
+  options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 20 } } }
 });
 </script>
 {% endblock %}

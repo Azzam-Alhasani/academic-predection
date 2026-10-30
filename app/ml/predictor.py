@@ -1,122 +1,99 @@
 """
-Prediction interface for the Academic Performance Monitoring & Prediction System.
-Manages model lifecycle: training on demand and running predictions.
+Prediction interface: trains the models on demand (cached) and runs predictions.
 """
 
-import os
-from flask import current_app
-from app.data.data_loader import load_students
-from app.ml.preprocessing import preprocess, preprocess_single
+import threading
+
+from app.data.data_loader import load_students, _score_to_grade
+from app.ml.preprocessing import prepare, record_to_frame
 from app.ml.trainer import train_all_models
 
-# In-memory cache: avoids re-training on every request within a session
+MIN_STUDENTS = 30
+
 _model_cache = None
+_lock = threading.Lock()
 
 
 def _get_models():
-    """Return cached models, training them if necessary."""
+    """Return cached models, training them on first use (thread-safe)."""
     global _model_cache
     if _model_cache is not None:
         return _model_cache
-
-    df = load_students()
-    if df.empty or len(df) < 10:
-        return None
-
-    X_train, X_test, y_reg_train, y_reg_test, y_clf_train, y_clf_test, scaler, feature_names = preprocess(df)
-    results = train_all_models(X_train, X_test, y_reg_train, y_reg_test, y_clf_train, y_clf_test)
-
-    _model_cache = {
-        "results": results,
-        "scaler": scaler,
-        "feature_names": feature_names,
-    }
-    return _model_cache
+    with _lock:
+        if _model_cache is not None:
+            return _model_cache
+        df = load_students()
+        if df.empty or len(df) < MIN_STUDENTS:
+            return None
+        X, y_reg, y_clf, groups = prepare(df)
+        if len(set(y_clf)) < 2:
+            return None  # need both passing and failing students to learn from
+        _model_cache = {
+            "results": train_all_models(X, y_reg, y_clf, groups),
+            "n_students": int(len(X)),
+        }
+        return _model_cache
 
 
 def invalidate_cache():
-    """Call this whenever student data changes so models retrain on next request."""
+    """Call whenever student data changes so models retrain on the next request."""
     global _model_cache
-    _model_cache = None
+    with _lock:
+        _model_cache = None
 
 
 def get_model_metrics() -> dict:
-    """Return evaluation metrics for all models (no input required)."""
+    """Return cross-validated evaluation metrics for all models."""
     cache = _get_models()
     if cache is None:
         return {}
 
     metrics = {}
     for key, result in cache["results"].items():
-        entry = {
-            "name": result["name"],
-            "type": result["type"],
-            "description": result["description"],
-        }
+        entry = {"name": result["name"], "type": result["type"], "description": result["description"]}
         if result["type"] == "regression":
-            entry["rmse"] = result["rmse"]
-            entry["r2"] = result["r2"]
+            entry.update(rmse=result["rmse"], r2=result["r2"])
         else:
-            entry["accuracy"] = result["accuracy"]
-            entry["precision"] = result["precision"]
-            entry["recall"] = result["recall"]
-            entry["f1"] = result["f1"]
-            entry["confusion_matrix"] = result["confusion_matrix"]
-            entry["roc_auc"] = result.get("roc_auc")
+            entry.update(
+                accuracy=result["accuracy"], precision=result["precision"],
+                recall=result["recall"], f1=result["f1"],
+                confusion_matrix=result["confusion_matrix"], roc_auc=result.get("roc_auc"),
+                baseline=result["baseline"],
+            )
         metrics[key] = entry
     return metrics
 
 
+def get_training_size() -> int:
+    cache = _get_models()
+    return cache["n_students"] if cache else 0
+
+
 def predict_student(record: dict) -> dict:
-    """
-    Run all models on a single student record dict.
-
-    Parameters
-    ----------
-    record : dict with keys matching student feature columns
-
-    Returns
-    -------
-    dict with prediction results from each model
-    """
+    """Run all models on a single student record (dict of form/record fields)."""
     cache = _get_models()
     if cache is None:
-        return {"error": "Not enough data to train models. Please add more students."}
+        return {"error": f"Not enough data to train models (need at least {MIN_STUDENTS} students)."}
 
-    X = preprocess_single(record, cache["scaler"], cache["feature_names"])
+    X = record_to_frame(record)
     predictions = {}
-
     for key, result in cache["results"].items():
         model = result["model"]
         if result["type"] == "regression":
-            score = float(model.predict(X)[0])
+            score = float(min(20.0, max(0.0, model.predict(X)[0])))
             predictions[key] = {
                 "name": result["name"],
                 "type": "regression",
                 "predicted_score": round(score, 1),
-                "grade": _score_to_grade(score),
+                "grade": _score_to_grade(score / 20 * 100),
             }
         else:
-            label = int(model.predict(X)[0])
-            proba = model.predict_proba(X)[0].tolist() if hasattr(model, "predict_proba") else None
+            p_pass = float(model.predict_proba(X)[0][1])
             predictions[key] = {
                 "name": result["name"],
                 "type": "classification",
-                "prediction": "Pass" if label == 1 else "Fail",
-                "confidence": round(max(proba) * 100, 1) if proba else None,
+                "prediction": "Pass" if p_pass >= 0.5 else "Fail",
+                "confidence": round(max(p_pass, 1 - p_pass) * 100, 1),
+                "p_pass": round(p_pass * 100, 1),
             }
-
     return predictions
-
-
-def _score_to_grade(score: float) -> str:
-    if score >= 90:
-        return "A"
-    elif score >= 80:
-        return "B"
-    elif score >= 70:
-        return "C"
-    elif score >= 60:
-        return "D"
-    else:
-        return "F"

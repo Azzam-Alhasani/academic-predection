@@ -2,16 +2,43 @@
 {% block title %}Students{% endblock %}
 {% block page_title %}Student Records{% endblock %}
 
+{% macro page_link(p) -%}
+{{ url_for('students.student_list', page=p, q=q, subject=subject, status=status) }}
+{%- endmacro %}
+
 {% block content %}
 <div class="row g-4 mt-1">
 
-  <!-- ── Action Bar ──────────────────────────────────────── -->
-  <div class="col-12 d-flex justify-content-between align-items-center">
-    <input type="text" id="searchInput" class="form-control w-auto" style="min-width:240px;"
-           placeholder="&#xf002;  Search name or ID…">
+  <!-- ── Filters ─────────────────────────────────────────── -->
+  <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <form method="GET" class="d-flex gap-2 flex-wrap">
+      <input type="text" name="q" value="{{ q }}" class="form-control w-auto" style="min-width:200px;"
+             placeholder="Search name or ID…">
+      <select name="subject" class="form-select w-auto">
+        <option value="">All subjects</option>
+        <option value="Math" {{ 'selected' if subject == 'Math' }}>Math</option>
+        <option value="Portuguese" {{ 'selected' if subject == 'Portuguese' }}>Portuguese</option>
+      </select>
+      <select name="status" class="form-select w-auto">
+        <option value="">All results</option>
+        <option value="pass" {{ 'selected' if status == 'pass' }}>Passed</option>
+        <option value="fail" {{ 'selected' if status == 'fail' }}>Failed</option>
+        <option value="at_risk" {{ 'selected' if status == 'at_risk' }}>At risk</option>
+      </select>
+      <button class="btn btn-outline-primary" type="submit"><i class="fa-solid fa-magnifying-glass me-1"></i>Filter</button>
+      {% if q or subject or status %}
+        <a class="btn btn-outline-secondary" href="{{ url_for('students.student_list') }}">Clear</a>
+      {% endif %}
+    </form>
+    {% if current_user %}
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
       <i class="fa-solid fa-plus me-1"></i> Add Student
     </button>
+    {% else %}
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('auth.login', next=request.full_path) }}">
+      <i class="fa-solid fa-lock me-1"></i>Log in to add, edit or delete
+    </a>
+    {% endif %}
   </div>
 
   <!-- ── Students Table ──────────────────────────────────── -->
@@ -22,17 +49,8 @@
           <table class="table table-hover mb-0" id="studentsTable">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Gender</th>
-                <th>Age</th>
-                <th>Attend %</th>
-                <th>Avg Score</th>
-                <th>GPA</th>
-                <th>Grade</th>
-                <th>Pass/Fail</th>
-                <th>At-Risk</th>
-                <th>Actions</th>
+                <th>#</th><th>Name</th><th>Subject</th><th>Gender</th><th>Age</th>
+                <th>G1</th><th>G2</th><th>G3 (final)</th><th>Grade</th><th>Result</th><th>At-Risk</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -40,65 +58,57 @@
               <tr>
                 <td class="text-muted">{{ s.student_id }}</td>
                 <td class="fw-semibold">
-                  <a href="{{ url_for('students.student_detail', student_id=s.student_id) }}" class="text-decoration-none text-white">
-                    {{ s.name }}
-                  </a>
+                  <a href="{{ url_for('students.student_detail', student_id=s.student_id) }}" class="text-decoration-none text-white">{{ s.name }}</a>
                 </td>
+                <td>{{ s.subject }}</td>
                 <td>{{ s.gender }}</td>
-                <td>{{ s.age }}</td>
+                <td>{{ s.age | int }}</td>
+                <td>{{ s.G1 | int }}</td>
+                <td>{{ s.G2 | int }}</td>
+                <td class="fw-semibold">{{ s.G3 | int }}</td>
+                <td><span class="badge grade-badge grade-{{ s.grade_letter }}">{{ s.grade_letter }}</span></td>
                 <td>
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="progress flex-grow-1" style="height:6px;max-width:60px;">
-                      <div class="progress-bar bg-{{ 'success' if s.attendance_pct >= 75 else 'warning' if s.attendance_pct >= 60 else 'danger' }}"
-                           style="width:{{ s.attendance_pct }}%"></div>
-                    </div>
-                    <small>{{ s.attendance_pct }}%</small>
-                  </div>
-                </td>
-                <td>{{ s.avg_score }}</td>
-                <td>{{ s.gpa }}</td>
-                <td>
-                  <span class="badge grade-badge grade-{{ s.grade_letter }}">{{ s.grade_letter }}</span>
+                  {% if s.pass_fail == 1 %}<span class="badge bg-success">Pass</span>
+                  {% else %}<span class="badge bg-danger">Fail</span>{% endif %}
                 </td>
                 <td>
-                  {% if s.pass_fail == 1 %}
-                    <span class="badge bg-success">Pass</span>
-                  {% else %}
-                    <span class="badge bg-danger">Fail</span>
-                  {% endif %}
+                  {% if s.at_risk == 1 %}<span class="badge bg-warning text-dark"><i class="fa-solid fa-triangle-exclamation me-1"></i>At Risk</span>
+                  {% else %}<span class="badge bg-secondary">OK</span>{% endif %}
                 </td>
-                <td>
-                  {% if s.at_risk == 1 %}
-                    <span class="badge bg-warning text-dark"><i class="fa-solid fa-triangle-exclamation me-1"></i>At Risk</span>
-                  {% else %}
-                    <span class="badge bg-secondary">OK</span>
-                  {% endif %}
-                </td>
-                <td>
-                  <a href="{{ url_for('students.student_detail', student_id=s.student_id) }}"
-                     class="btn btn-sm btn-outline-info me-1">
+                <td class="text-nowrap">
+                  <a href="{{ url_for('students.student_detail', student_id=s.student_id) }}" class="btn btn-sm btn-outline-info">
                     <i class="fa-solid fa-eye"></i>
                   </a>
+                  {% if current_user %}
                   <button class="btn btn-sm btn-outline-danger"
-                          onclick="confirmDelete({{ s.student_id }}, '{{ s.name }}')">
+                          data-id="{{ s.student_id }}" data-name="{{ s.name }}" onclick="confirmDelete(this)">
                     <i class="fa-solid fa-trash"></i>
                   </button>
+                  {% endif %}
                 </td>
               </tr>
               {% else %}
-              <tr><td colspan="11" class="text-center text-muted py-4">No students found.</td></tr>
+              <tr><td colspan="12" class="text-center text-muted py-4">No students found.</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       </div>
-      <div class="card-footer text-muted small">
-        Showing <span id="tableCount">{{ students|length }}</span> student(s)
+      <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="text-muted small">{{ total }} student(s) &middot; page {{ page }} of {{ pages }}</span>
+        {% if pages > 1 %}
+        <nav><ul class="pagination pagination-sm mb-0">
+          <li class="page-item {{ 'disabled' if page <= 1 }}"><a class="page-link" href="{{ page_link(page - 1) }}">&laquo; Prev</a></li>
+          <li class="page-item disabled"><span class="page-link">{{ page }} / {{ pages }}</span></li>
+          <li class="page-item {{ 'disabled' if page >= pages }}"><a class="page-link" href="{{ page_link(page + 1) }}">Next &raquo;</a></li>
+        </ul></nav>
+        {% endif %}
       </div>
     </div>
   </div>
 </div>
 
+{% if current_user %}
 <!-- ── Add Student Modal ───────────────────────────────────── -->
 <div class="modal fade" id="addStudentModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -110,50 +120,11 @@
       <form method="POST" action="{{ url_for('students.student_add') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Full Name</label>
-              <input type="text" name="name" class="form-control" required placeholder="e.g. John Smith" />
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Gender</label>
-              <select name="gender" class="form-select" required>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Age</label>
-              <input type="number" name="age" class="form-control" min="10" max="30" value="18" required />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Attendance %</label>
-              <input type="number" name="attendance_pct" class="form-control" min="0" max="100" step="0.1" value="80" required />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Study Hours/Week</label>
-              <input type="number" name="study_hours_per_week" class="form-control" min="0" max="20" step="0.5" value="7" required />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Assignments Submitted</label>
-              <input type="number" name="assignments_submitted" class="form-control" min="0" max="12" value="8" required />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Previous GPA</label>
-              <input type="number" name="previous_gpa" class="form-control" min="0" max="4" step="0.01" value="2.5" required />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Previous Term Avg</label>
-              <input type="number" name="previous_term_avg" class="form-control" min="0" max="100" step="0.1" value="60" required />
-            </div>
-            <div class="col-12"><hr class="my-1" /><p class="form-label mb-2 fw-semibold">Subject Scores (0–100)</p></div>
-            {% for subj in ['math','science','english','history','cs'] %}
-            <div class="col-md-4 col-lg-2" style="flex:1;">
-              <label class="form-label text-capitalize">{{ subj }}</label>
-              <input type="number" name="{{ subj }}" class="form-control" min="0" max="100" value="60" required />
-            </div>
-            {% endfor %}
-          </div>
+          {% set form_student = {'subject': 'Math', 'gender': 'Female', 'age': 17, 'studytime': 2, 'failures': 0,
+                                 'absences': 4, 'higher': 'yes', 'internet': 'yes', 'G1': 10, 'G2': 10, 'G3': 10} %}
+          {% include "_student_fields.html" %}
+          <p class="text-muted small mt-3 mb-0">Name is optional. Leave it blank to use an automatic label. The result is
+          Pass when the final grade G3 is 10 or more.</p>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -172,9 +143,7 @@
         <h6 class="modal-title text-danger"><i class="fa-solid fa-trash me-2"></i>Delete Student</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">
-        <p>Remove <strong id="deleteStudentName"></strong> from records? This cannot be undone.</p>
-      </div>
+      <div class="modal-body"><p>Remove <strong id="deleteStudentName"></strong> from records? This cannot be undone.</p></div>
       <div class="modal-footer border-0">
         <form id="deleteForm" method="POST">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -185,27 +154,14 @@
     </div>
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Search
-document.getElementById('searchInput').addEventListener('input', function () {
-  const q = this.value.toLowerCase();
-  const rows = document.querySelectorAll('#studentsTable tbody tr');
-  let visible = 0;
-  rows.forEach(row => {
-    const show = row.textContent.toLowerCase().includes(q);
-    row.style.display = show ? '' : 'none';
-    if (show) visible++;
-  });
-  document.getElementById('tableCount').textContent = visible;
-});
-
-// Delete confirmation
-function confirmDelete(id, name) {
-  document.getElementById('deleteStudentName').textContent = name;
-  document.getElementById('deleteForm').action = `/students/${id}/delete`;
+function confirmDelete(btn) {
+  document.getElementById('deleteStudentName').textContent = btn.dataset.name;
+  document.getElementById('deleteForm').action = `/students/${btn.dataset.id}/delete`;
   new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
 </script>

@@ -1,77 +1,80 @@
 """
-Preprocessing utilities for the ML pipeline.
-Handles feature selection, encoding, scaling, and train/test split.
+Feature definition and preprocessing for the ML pipeline.
+
+Predicting the FINAL result (G3) from the two earlier period grades (G1, G2) plus a
+few habit/background fields. G3 itself is never used as an input.
 """
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+PASS_MARK = 10
 
-FEATURE_COLS = [
-    "attendance_pct",
-    "assignments_submitted",
-    "study_hours_per_week",
-    "previous_gpa",
-    "gender_encoded",
-]
+NUMERIC_FEATURES = ["age", "studytime", "failures", "absences", "G1", "G2"]
+CATEGORICAL_FEATURES = ["subject", "gender", "higher", "internet"]
+FEATURES = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 
-REGRESSION_TARGET = "avg_score"
+REGRESSION_TARGET = "G3"
 CLASSIFICATION_TARGET = "pass_fail"
 
+# The same student can appear in both the Math and Portuguese files. These background
+# attributes identify a student (per the dataset authors), so records sharing them are
+# kept in the same cross-validation fold; otherwise the test would partly "see" the
+# same student during training and look better than it really is.
+GROUP_KEYS = [
+    "school", "gender", "age", "address", "famsize", "Pstatus", "Medu", "Fedu",
+    "Mjob", "Fjob", "reason", "nursery", "internet",
+]
 
-def preprocess(df: pd.DataFrame):
-    """
-    Prepare features and targets for training.
 
-    Returns
-    -------
-    X_train, X_test, y_reg_train, y_reg_test, y_clf_train, y_clf_test, scaler, feature_names
-    """
-    df = df.copy()
-
-    # Encode gender
-    le = LabelEncoder()
-    if "gender" in df.columns:
-        df["gender_encoded"] = le.fit_transform(df["gender"].astype(str))
-    else:
-        df["gender_encoded"] = 0
-
-    # Compute avg_score if not present
-    subject_cols = ["math", "science", "english", "history", "cs"]
-    present = [c for c in subject_cols if c in df.columns]
-    if "avg_score" not in df.columns and present:
-        df["avg_score"] = df[present].mean(axis=1)
-
-    # Drop rows with missing targets
-    df = df.dropna(subset=[REGRESSION_TARGET, CLASSIFICATION_TARGET])
-
-    available_features = [f for f in FEATURE_COLS if f in df.columns]
-    X = df[available_features].fillna(df[available_features].median())
-    y_reg = df[REGRESSION_TARGET].values
-    y_clf = df[CLASSIFICATION_TARGET].astype(int).values
-
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
-    X_train, X_test, y_reg_train, y_reg_test, y_clf_train, y_clf_test = train_test_split(
-        X_scaled, y_reg, y_clf, test_size=0.2, random_state=42, stratify=y_clf
+def build_preprocessor() -> ColumnTransformer:
+    """Impute missing values, scale numbers, one-hot encode categories (dense output)."""
+    numeric = make_pipeline(SimpleImputer(strategy="median"), StandardScaler())
+    categorical = make_pipeline(
+        SimpleImputer(strategy="most_frequent"),
+        OneHotEncoder(handle_unknown="ignore", sparse_output=False),
     )
+    return ColumnTransformer([
+        ("num", numeric, NUMERIC_FEATURES),
+        ("cat", categorical, CATEGORICAL_FEATURES),
+    ])
 
-    return X_train, X_test, y_reg_train, y_reg_test, y_clf_train, y_clf_test, scaler, available_features
+
+def make_groups(df: pd.DataFrame) -> np.ndarray:
+    """Integer group id per row; rows with missing key fields (added by hand) get their own."""
+    keys = [k for k in GROUP_KEYS if k in df.columns]
+    if not keys:
+        return np.arange(len(df))
+    text = df[keys].astype(str).agg("|".join, axis=1)
+    incomplete = df[keys].isna().any(axis=1)
+    if "student_id" in df.columns:
+        text = text.where(~incomplete, "id-" + df["student_id"].astype(str))
+    return text.astype("category").cat.codes.to_numpy()
 
 
-def preprocess_single(record: dict, scaler: "StandardScaler", feature_names: list) -> np.ndarray:
-    """Transform a single student record dict into a scaled feature vector."""
-    le = LabelEncoder()
-    le.classes_ = np.array(["Female", "Male"])
-    gender_enc = 1 if str(record.get("gender", "Male")).strip().title() == "Male" else 0
+def prepare(df: pd.DataFrame):
+    """Return X (feature frame), regression target, classification target and groups."""
+    df = df.dropna(subset=[REGRESSION_TARGET]).reset_index(drop=True)
+    for col in FEATURES:
+        if col not in df.columns:
+            df[col] = np.nan
+    X = df[FEATURES].copy()
+    y_reg = df[REGRESSION_TARGET].astype(float).to_numpy()
+    y_clf = (df[REGRESSION_TARGET] >= PASS_MARK).astype(int).to_numpy()
+    return X, y_reg, y_clf, make_groups(df)
+
+
+def record_to_frame(record: dict) -> pd.DataFrame:
+    """One-row feature frame from a form/record dict; missing fields become NaN (imputed)."""
     row = {}
-    for feat in feature_names:
-        if feat == "gender_encoded":
-            row[feat] = gender_enc
-        else:
-            row[feat] = record.get(feat, 0)
-    X = pd.DataFrame([row])[feature_names].fillna(0)
-    return scaler.transform(X)
+    for col in FEATURES:
+        value = record.get(col)
+        row[col] = np.nan if value in (None, "") else value
+    frame = pd.DataFrame([row])
+    for col in NUMERIC_FEATURES:
+        frame[col] = pd.to_numeric(frame[col], errors="coerce")
+    return frame

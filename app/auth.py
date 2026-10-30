@@ -4,12 +4,56 @@ with hashed passwords; sessions use Flask's signed cookie.
 """
 
 import os
+import time
 import pandas as pd
 from functools import wraps
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import (
+    Blueprint, render_template, request, redirect, url_for, session, flash, current_app,
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+# Failed login attempts per client IP: {ip: [timestamps]}. In-memory is enough for a
+# single-process deployment and keeps brute-force guessing slow.
+_failed_logins: dict = {}
+
+
+def _client_ip() -> str:
+    # remote_addr is the real client address: in production create_app() wraps the app in
+    # ProxyFix, which takes it from the host's trusted proxy. Reading X-Forwarded-For
+    # directly here would let anyone dodge the throttle by sending a fake header.
+    return request.remote_addr or "unknown"
+
+
+def _recent_failures(ip: str) -> list:
+    window = current_app.config.get("LOGIN_WINDOW_SECONDS", 300)
+    now = time.time()
+    attempts = [t for t in _failed_logins.get(ip, []) if now - t < window]
+    _failed_logins[ip] = attempts
+    return attempts
+
+
+def _safe_next(target: str | None) -> str | None:
+    """Allow only same-site relative redirects (blocks open-redirect via ?next=)."""
+    if target and target.startswith("/") and not target.startswith("//") and "\\" not in target:
+        return target
+    return None
+
+
+def ensure_admin_from_env() -> None:
+    """
+    Create the admin account from environment variables when none exists yet.
+    Used on hosts with no shell access (e.g. Render): set ADMIN_PASSWORD (and
+    optionally ADMIN_USERNAME) and the account is created at start-up.
+    """
+    password = os.environ.get("ADMIN_PASSWORD")
+    if not password:
+        return
+    username = os.environ.get("ADMIN_USERNAME", "admin")
+    df = load_users()
+    if df.empty or not (df["username"] == username).any():
+        add_user(username, password, role="admin")
 
 
 def _users_file():
@@ -86,12 +130,20 @@ def add_user(username: str, password: str, role: str = "admin") -> None:
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        ip = _client_ip()
+        limit = current_app.config.get("LOGIN_MAX_ATTEMPTS", 5)
+        if len(_recent_failures(ip)) >= limit:
+            flash("Too many failed attempts. Please wait a few minutes and try again.", "danger")
+            return render_template("login.html"), 429
+
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         if verify_user(username, password):
+            _failed_logins.pop(ip, None)
             session["username"] = username
             flash(f"Welcome back, {username}.", "success")
-            return redirect(request.args.get("next") or url_for("main.dashboard"))
+            return redirect(_safe_next(request.args.get("next")) or url_for("main.dashboard"))
+        _failed_logins.setdefault(ip, []).append(time.time())
         flash("Invalid username or password.", "danger")
 
     return render_template("login.html")

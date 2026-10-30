@@ -1,3 +1,5 @@
+> **Note:** this document was written for an earlier version of the project that used generated sample data. The application now uses the real UCI Student Performance dataset; see the main [README](../README.md) for current data, results and deployment steps. Figures and charts below may be out of date.
+
 ## Project Flowchart
 
 Below is a simple flowchart describing the main data and control flow of the Academic Performance Monitoring & Prediction System.
