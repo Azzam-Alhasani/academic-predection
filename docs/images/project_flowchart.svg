@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333" />
+    </marker>
+    <style>
+      .box { fill:#f8fafc; stroke:#1f2937; stroke-width:1.5; rx:6; }
+      .box-alt { fill:#eef6ff; stroke:#1e6fff; stroke-width:1.5; rx:6; }
+      .box-warn { fill:#fff7e6; stroke:#ff9900; stroke-width:1.5; rx:6; }
+      .text { font-family: 'Segoe UI', system-ui, sans-serif; font-size:13px; fill:#0f172a; }
+      .title { font-size:14px; font-weight:600; }
+      .small { font-size:11px; fill:#475569 }
+      .arrow { stroke:#333; stroke-width:1.2; fill:none; marker-end:url(#arrow); }
+    </style>
+  </defs>
+
+  <!-- Data source -->
+  <rect x="40" y="40" width="200" height="60" class="box"/>
+  <text x="140" y="72" text-anchor="middle" class="text title">CSV student data</text>
+  <text x="140" y="90" text-anchor="middle" class="text small">app/data/*.csv</text>
+
+  <!-- Data loader -->
+  <rect x="300" y="40" width="220" height="60" class="box"/>
+  <text x="410" y="68" text-anchor="middle" class="text title">Data Loader</text>
+  <text x="410" y="86" text-anchor="middle" class="text small">app/data/data_loader.py</text>
+
+  <path d="M240 70 L300 70" class="arrow" />
+
+  <!-- Preprocessing -->
+  <rect x="560" y="40" width="220" height="60" class="box"/>
+  <text x="670" y="66" text-anchor="middle" class="text title">Preprocessing</text>
+  <text x="670" y="86" text-anchor="middle" class="text small">app/ml/preprocessing.py</text>
+
+  <path d="M520 70 L560 70" class="arrow" />
+
+  <!-- Trainer -->
+  <rect x="840" y="30" width="260" height="80" class="box-alt"/>
+  <text x="970" y="56" text-anchor="middle" class="text title">Trainer</text>
+  <text x="970" y="76" text-anchor="middle" class="text small">app/ml/trainer.py</text>
+
+  <path d="M780 70 L840 70" class="arrow" />
+
+  <!-- Models -->
+  <g>
+    <rect x="150" y="170" width="160" height="56" class="box"/>
+    <text x="230" y="195" text-anchor="middle" class="text title">Linear Regression</text>
+    <text x="230" y="212" text-anchor="middle" class="text small">regression</text>
+
+    <rect x="340" y="170" width="160" height="56" class="box"/>
+    <text x="420" y="195" text-anchor="middle" class="text title">Logistic Regression</text>
+    <text x="420" y="212" text-anchor="middle" class="text small">classification</text>
+
+    <rect x="530" y="170" width="160" height="56" class="box"/>
+    <text x="610" y="195" text-anchor="middle" class="text title">Random Forest</text>
+    <text x="610" y="212" text-anchor="middle" class="text small">classification</text>
+
+    <rect x="720" y="170" width="160" height="56" class="box"/>
+    <text x="800" y="195" text-anchor="middle" class="text title">Decision Tree</text>
+    <text x="800" y="212" text-anchor="middle" class="text small">classification</text>
+  </g>
+
+  <path d="M1000 70 L900 120" class="arrow" />
+  <path d="M900 120 L900 170" class="arrow" />
+  <path d="M900 170 L880 170" class="arrow" />
+
+  <!-- Predictor -->
+  <rect x="920" y="260" width="220" height="60" class="box-warn"/>
+  <text x="1030" y="288" text-anchor="middle" class="text title">Predictor</text>
+  <text x="1030" y="306" text-anchor="middle" class="text small">app/ml/predictor.py</text>
+
+  <path d="M820 198 L920 298" class="arrow" />
+
+  <!-- Routes & Templates -->
+  <rect x="660" y="360" width="220" height="60" class="box"/>
+  <text x="770" y="388" text-anchor="middle" class="text title">Routes</text>
+  <text x="770" y="406" text-anchor="middle" class="text small">app/routes/predictions.py</text>
+
+  <rect x="360" y="360" width="220" height="60" class="box"/>
+  <text x="470" y="388" text-anchor="middle" class="text title">Templates</text>
+  <text x="470" y="406" text-anchor="middle" class="text small">app/templates/predictions.html</text>
+
+  <path d="M1030 320 L880 380" class="arrow" />
+  <path d="M580 320 L580 360" class="arrow" />
+
+  <!-- User input -->
+  <rect x="40" y="360" width="200" height="60" class="box"/>
+  <text x="140" y="388" text-anchor="middle" class="text title">User Input</text>
+  <text x="140" y="406" text-anchor="middle" class="text small">select student / sliders</text>
+
+  <path d="M240 390 L360 390" class="arrow" />
+  <path d="M580 420 L660 420" class="arrow" />
+
+  <!-- Plots -->
+  <rect x="940" y="380" width="200" height="60" class="box"/>
+  <text x="1040" y="408" text-anchor="middle" class="text title">Plots & Metrics</text>
+  <text x="1040" y="426" text-anchor="middle" class="text small">docs/images/</text>
+
+</svg>
