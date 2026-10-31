@@ -1,0 +1,1842 @@
+{
+ "meta": {
+  "n_students": 4424,
+  "dropout_rate": 0.3212025316455696,
+  "generated": "2026-10-31 11:52 UTC",
+  "scikit_learn": "1.9.1",
+  "python": "3.13.18",
+  "seed": 42,
+  "cv": {
+   "splits": 5,
+   "repeats_stage_a": 3,
+   "repeats_stage_b": 2,
+   "inner_folds": 3,
+   "inner_candidates": 5
+  },
+  "minutes": 5.5
+ },
+ "classification": {
+  "after_sem1": {
+   "candidates": [
+    {
+     "key": "majority",
+     "label": "Majority-class baseline",
+     "description": "Always predicts the most common outcome; the bar every real model must beat.",
+     "complexity": 0,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.6788,
+       "sd": 0.0005
+      },
+      "balanced_accuracy": {
+       "mean": 0.5,
+       "sd": 0.0
+      },
+      "precision": {
+       "mean": 0.0,
+       "sd": 0.0
+      },
+      "recall": {
+       "mean": 0.0,
+       "sd": 0.0
+      },
+      "f1": {
+       "mean": 0.0,
+       "sd": 0.0
+      },
+      "roc_auc": {
+       "mean": 0.5,
+       "sd": 0.0
+      },
+      "pr_auc": {
+       "mean": 0.3212,
+       "sd": 0.0005
+      },
+      "brier": {
+       "mean": 0.218,
+       "sd": 0.0002
+      }
+     },
+     "p_vs_best": 0.0,
+     "is_best_default": false
+    },
+    {
+     "key": "logistic",
+     "label": "Logistic Regression",
+     "description": "Linear model; coefficients are easy to explain to students and staff.",
+     "complexity": 1,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8521,
+       "sd": 0.0078
+      },
+      "balanced_accuracy": {
+       "mean": 0.8051,
+       "sd": 0.0096
+      },
+      "precision": {
+       "mean": 0.8342,
+       "sd": 0.0175
+      },
+      "recall": {
+       "mean": 0.6737,
+       "sd": 0.0175
+      },
+      "f1": {
+       "mean": 0.7452,
+       "sd": 0.014
+      },
+      "roc_auc": {
+       "mean": 0.896,
+       "sd": 0.0097
+      },
+      "pr_auc": {
+       "mean": 0.8439,
+       "sd": 0.0148
+      },
+      "brier": {
+       "mean": 0.109,
+       "sd": 0.0049
+      }
+     },
+     "p_vs_best": null,
+     "is_best_default": true
+    },
+    {
+     "key": "naive_bayes",
+     "label": "Naive Bayes",
+     "description": "Probabilistic model that assumes independent features.",
+     "complexity": 1,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.7929,
+       "sd": 0.0156
+      },
+      "balanced_accuracy": {
+       "mean": 0.7732,
+       "sd": 0.0142
+      },
+      "precision": {
+       "mean": 0.6651,
+       "sd": 0.0271
+      },
+      "recall": {
+       "mean": 0.7183,
+       "sd": 0.0192
+      },
+      "f1": {
+       "mean": 0.6904,
+       "sd": 0.019
+      },
+      "roc_auc": {
+       "mean": 0.852,
+       "sd": 0.0137
+      },
+      "pr_auc": {
+       "mean": 0.7538,
+       "sd": 0.0276
+      },
+      "brier": {
+       "mean": 0.1929,
+       "sd": 0.0149
+      }
+     },
+     "p_vs_best": 0.0,
+     "is_best_default": false
+    },
+    {
+     "key": "decision_tree",
+     "label": "Decision Tree",
+     "description": "A readable set of if-then rules.",
+     "complexity": 2,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.7881,
+       "sd": 0.0124
+      },
+      "balanced_accuracy": {
+       "mean": 0.7603,
+       "sd": 0.014
+      },
+      "precision": {
+       "mean": 0.6662,
+       "sd": 0.0218
+      },
+      "recall": {
+       "mean": 0.6828,
+       "sd": 0.0247
+      },
+      "f1": {
+       "mean": 0.6742,
+       "sd": 0.0188
+      },
+      "roc_auc": {
+       "mean": 0.7603,
+       "sd": 0.014
+      },
+      "pr_auc": {
+       "mean": 0.557,
+       "sd": 0.0191
+      },
+      "brier": {
+       "mean": 0.2119,
+       "sd": 0.0124
+      }
+     },
+     "p_vs_best": 0.0,
+     "is_best_default": false
+    },
+    {
+     "key": "knn",
+     "label": "k-Nearest Neighbours",
+     "description": "Predicts from the most similar past students.",
+     "complexity": 3,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8278,
+       "sd": 0.0121
+      },
+      "balanced_accuracy": {
+       "mean": 0.7749,
+       "sd": 0.0159
+      },
+      "precision": {
+       "mean": 0.7941,
+       "sd": 0.0247
+      },
+      "recall": {
+       "mean": 0.627,
+       "sd": 0.03
+      },
+      "f1": {
+       "mean": 0.7003,
+       "sd": 0.0234
+      },
+      "roc_auc": {
+       "mean": 0.8499,
+       "sd": 0.0146
+      },
+      "pr_auc": {
+       "mean": 0.742,
+       "sd": 0.0205
+      },
+      "brier": {
+       "mean": 0.133,
+       "sd": 0.0078
+      }
+     },
+     "p_vs_best": 0.0,
+     "is_best_default": false
+    },
+    {
+     "key": "svm_rbf",
+     "label": "Support Vector Machine (RBF)",
+     "description": "Non-linear boundary; strong on small tables, slower to train.",
+     "complexity": 4,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8501,
+       "sd": 0.0056
+      },
+      "balanced_accuracy": {
+       "mean": 0.7993,
+       "sd": 0.0089
+      },
+      "precision": {
+       "mean": 0.8415,
+       "sd": 0.0124
+      },
+      "recall": {
+       "mean": 0.6573,
+       "sd": 0.0205
+      },
+      "f1": {
+       "mean": 0.7378,
+       "sd": 0.0124
+      },
+      "roc_auc": {
+       "mean": 0.8852,
+       "sd": 0.0112
+      },
+      "pr_auc": {
+       "mean": 0.8381,
+       "sd": 0.0128
+      },
+      "brier": {
+       "mean": null,
+       "sd": null
+      }
+     },
+     "p_vs_best": 0.0274,
+     "is_best_default": false
+    },
+    {
+     "key": "random_forest",
+     "label": "Random Forest",
+     "description": "Many decision trees voting together.",
+     "complexity": 5,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8501,
+       "sd": 0.0087
+      },
+      "balanced_accuracy": {
+       "mean": 0.8112,
+       "sd": 0.0095
+      },
+      "precision": {
+       "mean": 0.8065,
+       "sd": 0.0204
+      },
+      "recall": {
+       "mean": 0.7023,
+       "sd": 0.0157
+      },
+      "f1": {
+       "mean": 0.7507,
+       "sd": 0.0138
+      },
+      "roc_auc": {
+       "mean": 0.8948,
+       "sd": 0.0117
+      },
+      "pr_auc": {
+       "mean": 0.8369,
+       "sd": 0.0145
+      },
+      "brier": {
+       "mean": 0.111,
+       "sd": 0.0059
+      }
+     },
+     "p_vs_best": 0.7412,
+     "is_best_default": false
+    },
+    {
+     "key": "extra_trees",
+     "label": "Extra Trees",
+     "description": "Like a random forest with extra randomness.",
+     "complexity": 5,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8357,
+       "sd": 0.012
+      },
+      "balanced_accuracy": {
+       "mean": 0.7986,
+       "sd": 0.0122
+      },
+      "precision": {
+       "mean": 0.7718,
+       "sd": 0.0268
+      },
+      "recall": {
+       "mean": 0.6948,
+       "sd": 0.0175
+      },
+      "f1": {
+       "mean": 0.7311,
+       "sd": 0.0177
+      },
+      "roc_auc": {
+       "mean": 0.8844,
+       "sd": 0.0116
+      },
+      "pr_auc": {
+       "mean": 0.8132,
+       "sd": 0.0113
+      },
+      "brier": {
+       "mean": 0.1201,
+       "sd": 0.0065
+      }
+     },
+     "p_vs_best": 0.0099,
+     "is_best_default": false
+    },
+    {
+     "key": "gradient_boosting",
+     "label": "Gradient Boosting",
+     "description": "Trees built one after another, each fixing the last one's errors.",
+     "complexity": 6,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8486,
+       "sd": 0.0121
+      },
+      "balanced_accuracy": {
+       "mean": 0.8085,
+       "sd": 0.0136
+      },
+      "precision": {
+       "mean": 0.8059,
+       "sd": 0.0243
+      },
+      "recall": {
+       "mean": 0.6965,
+       "sd": 0.0192
+      },
+      "f1": {
+       "mean": 0.7471,
+       "sd": 0.0199
+      },
+      "roc_auc": {
+       "mean": 0.8901,
+       "sd": 0.0114
+      },
+      "pr_auc": {
+       "mean": 0.8393,
+       "sd": 0.0145
+      },
+      "brier": {
+       "mean": 0.1127,
+       "sd": 0.007
+      }
+     },
+     "p_vs_best": 0.1664,
+     "is_best_default": false
+    },
+    {
+     "key": "neural_net",
+     "label": "Neural Network (MLP)",
+     "description": "Small multi-layer network.",
+     "complexity": 7,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8525,
+       "sd": 0.0107
+      },
+      "balanced_accuracy": {
+       "mean": 0.8048,
+       "sd": 0.0126
+      },
+      "precision": {
+       "mean": 0.8372,
+       "sd": 0.0231
+      },
+      "recall": {
+       "mean": 0.6716,
+       "sd": 0.0207
+      },
+      "f1": {
+       "mean": 0.7452,
+       "sd": 0.0188
+      },
+      "roc_auc": {
+       "mean": 0.8952,
+       "sd": 0.0115
+      },
+      "pr_auc": {
+       "mean": 0.8413,
+       "sd": 0.0163
+      },
+      "brier": {
+       "mean": 0.1102,
+       "sd": 0.0063
+      }
+     },
+     "p_vs_best": 0.7548,
+     "is_best_default": false
+    }
+   ],
+   "tuned": [
+    {
+     "key": "random_forest",
+     "label": "Random Forest",
+     "complexity": 5,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8547,
+       "sd": 0.007
+      },
+      "balanced_accuracy": {
+       "mean": 0.813,
+       "sd": 0.0113
+      },
+      "precision": {
+       "mean": 0.8246,
+       "sd": 0.0186
+      },
+      "recall": {
+       "mean": 0.6963,
+       "sd": 0.0277
+      },
+      "f1": {
+       "mean": 0.7546,
+       "sd": 0.0147
+      },
+      "roc_auc": {
+       "mean": 0.8987,
+       "sd": 0.0079
+      },
+      "pr_auc": {
+       "mean": 0.8492,
+       "sd": 0.0155
+      },
+      "brier": {
+       "mean": 0.1086,
+       "sd": 0.005
+      }
+     },
+     "p_vs_best": null,
+     "within_one_se": true,
+     "is_best": true
+    },
+    {
+     "key": "gradient_boosting",
+     "label": "Gradient Boosting",
+     "complexity": 6,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8539,
+       "sd": 0.0082
+      },
+      "balanced_accuracy": {
+       "mean": 0.8139,
+       "sd": 0.0136
+      },
+      "precision": {
+       "mean": 0.8176,
+       "sd": 0.0138
+      },
+      "recall": {
+       "mean": 0.702,
+       "sd": 0.0307
+      },
+      "f1": {
+       "mean": 0.755,
+       "sd": 0.0176
+      },
+      "roc_auc": {
+       "mean": 0.8969,
+       "sd": 0.0092
+      },
+      "pr_auc": {
+       "mean": 0.8468,
+       "sd": 0.0187
+      },
+      "brier": {
+       "mean": 0.1084,
+       "sd": 0.0053
+      }
+     },
+     "p_vs_best": 0.3017,
+     "within_one_se": true,
+     "is_best": false
+    },
+    {
+     "key": "logistic",
+     "label": "Logistic Regression",
+     "complexity": 1,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8528,
+       "sd": 0.0105
+      },
+      "balanced_accuracy": {
+       "mean": 0.8061,
+       "sd": 0.0155
+      },
+      "precision": {
+       "mean": 0.8353,
+       "sd": 0.0172
+      },
+      "recall": {
+       "mean": 0.6752,
+       "sd": 0.0313
+      },
+      "f1": {
+       "mean": 0.7464,
+       "sd": 0.0213
+      },
+      "roc_auc": {
+       "mean": 0.8953,
+       "sd": 0.0083
+      },
+      "pr_auc": {
+       "mean": 0.8425,
+       "sd": 0.0154
+      },
+      "brier": {
+       "mean": 0.1093,
+       "sd": 0.0053
+      }
+     },
+     "p_vs_best": 0.3147,
+     "within_one_se": false,
+     "is_best": false
+    },
+    {
+     "key": "neural_net",
+     "label": "Neural Network (MLP)",
+     "complexity": 7,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8531,
+       "sd": 0.0084
+      },
+      "balanced_accuracy": {
+       "mean": 0.805,
+       "sd": 0.0134
+      },
+      "precision": {
+       "mean": 0.8403,
+       "sd": 0.0196
+      },
+      "recall": {
+       "mean": 0.6707,
+       "sd": 0.0309
+      },
+      "f1": {
+       "mean": 0.7454,
+       "sd": 0.0181
+      },
+      "roc_auc": {
+       "mean": 0.891,
+       "sd": 0.0077
+      },
+      "pr_auc": {
+       "mean": 0.8349,
+       "sd": 0.0126
+      },
+      "brier": {
+       "mean": 0.1131,
+       "sd": 0.0062
+      }
+     },
+     "p_vs_best": 0.1329,
+     "within_one_se": false,
+     "is_best": false
+    }
+   ],
+   "best_default": "logistic",
+   "best_tuned": "random_forest",
+   "selected": "random_forest",
+   "selected_label": "Random Forest",
+   "selected_params": {
+    "min_samples_leaf": 5,
+    "max_depth": null
+   },
+   "se_used": 0.0025,
+   "rule": "highest mean roc_auc, then the simplest model within one standard error of it",
+   "n": 4424,
+   "positive_rate": 0.3212,
+   "examination": {
+    "thresholds": [
+     {
+      "threshold": 0.2,
+      "accuracy": 0.78,
+      "precision": 0.61,
+      "recall": 0.873,
+      "f1": 0.718
+     },
+     {
+      "threshold": 0.3,
+      "accuracy": 0.831,
+      "precision": 0.704,
+      "recall": 0.82,
+      "f1": 0.757
+     },
+     {
+      "threshold": 0.4,
+      "accuracy": 0.851,
+      "precision": 0.768,
+      "recall": 0.766,
+      "f1": 0.767
+     },
+     {
+      "threshold": 0.5,
+      "accuracy": 0.857,
+      "precision": 0.828,
+      "recall": 0.699,
+      "f1": 0.758
+     },
+     {
+      "threshold": 0.6,
+      "accuracy": 0.849,
+      "precision": 0.871,
+      "recall": 0.624,
+      "f1": 0.727
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "0.0-0.1",
+      "predicted": 0.054,
+      "observed": 0.052,
+      "n": 1585
+     },
+     {
+      "bin": "0.1-0.2",
+      "predicted": 0.141,
+      "observed": 0.12,
+      "n": 805
+     },
+     {
+      "bin": "0.2-0.3",
+      "predicted": 0.244,
+      "observed": 0.201,
+      "n": 379
+     },
+     {
+      "bin": "0.3-0.4",
+      "predicted": 0.349,
+      "observed": 0.321,
+      "n": 237
+     },
+     {
+      "bin": "0.4-0.5",
+      "predicted": 0.452,
+      "observed": 0.438,
+      "n": 219
+     },
+     {
+      "bin": "0.5-0.6",
+      "predicted": 0.55,
+      "observed": 0.588,
+      "n": 182
+     },
+     {
+      "bin": "0.6-0.7",
+      "predicted": 0.651,
+      "observed": 0.674,
+      "n": 193
+     },
+     {
+      "bin": "0.7-0.8",
+      "predicted": 0.753,
+      "observed": 0.806,
+      "n": 170
+     },
+     {
+      "bin": "0.8-0.9",
+      "predicted": 0.854,
+      "observed": 0.906,
+      "n": 286
+     },
+     {
+      "bin": "0.9-1.0",
+      "predicted": 0.947,
+      "observed": 0.978,
+      "n": 368
+     }
+    ],
+    "brier": 0.1076,
+    "confusion": {
+     "tn": 2797,
+     "fp": 206,
+     "fn": 428,
+     "tp": 993
+    },
+    "importance": [
+     {
+      "feature": "s1_completion",
+      "drop_in_auc": 0.0548,
+      "sd": 0.0068
+     },
+     {
+      "feature": "tuition_paid",
+      "drop_in_auc": 0.0423,
+      "sd": 0.005
+     },
+     {
+      "feature": "s1_approved",
+      "drop_in_auc": 0.0148,
+      "sd": 0.0051
+     },
+     {
+      "feature": "programme",
+      "drop_in_auc": 0.0107,
+      "sd": 0.0011
+     },
+     {
+      "feature": "s1_mark",
+      "drop_in_auc": 0.0103,
+      "sd": 0.0029
+     },
+     {
+      "feature": "age",
+      "drop_in_auc": 0.0064,
+      "sd": 0.0019
+     },
+     {
+      "feature": "gender",
+      "drop_in_auc": 0.0064,
+      "sd": 0.0024
+     },
+     {
+      "feature": "scholarship",
+      "drop_in_auc": 0.0046,
+      "sd": 0.0019
+     },
+     {
+      "feature": "s1_enrolled",
+      "drop_in_auc": 0.0013,
+      "sd": 0.001
+     },
+     {
+      "feature": "admission_mark",
+      "drop_in_auc": 0.0012,
+      "sd": 0.001
+     }
+    ],
+    "learning_curve": {
+     "sizes": [
+      353,
+      884,
+      1769,
+      2654,
+      3539
+     ],
+     "train": [
+      0.9535,
+      0.9577,
+      0.9607,
+      0.9582,
+      0.9569
+     ],
+     "validation": [
+      0.8825,
+      0.8932,
+      0.8962,
+      0.8976,
+      0.9006
+     ]
+    }
+   }
+  },
+  "after_sem2": {
+   "candidates": [
+    {
+     "key": "majority",
+     "label": "Majority-class baseline",
+     "description": "Always predicts the most common outcome; the bar every real model must beat.",
+     "complexity": 0,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.6788,
+       "sd": 0.0005
+      },
+      "balanced_accuracy": {
+       "mean": 0.5,
+       "sd": 0.0
+      },
+      "precision": {
+       "mean": 0.0,
+       "sd": 0.0
+      },
+      "recall": {
+       "mean": 0.0,
+       "sd": 0.0
+      },
+      "f1": {
+       "mean": 0.0,
+       "sd": 0.0
+      },
+      "roc_auc": {
+       "mean": 0.5,
+       "sd": 0.0
+      },
+      "pr_auc": {
+       "mean": 0.3212,
+       "sd": 0.0005
+      },
+      "brier": {
+       "mean": 0.218,
+       "sd": 0.0002
+      }
+     },
+     "p_vs_best": 0.0,
+     "is_best_default": false
+    },
+    {
+     "key": "logistic",
+     "label": "Logistic Regression",
+     "description": "Linear model; coefficients are easy to explain to students and staff.",
+     "complexity": 1,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8723,
+       "sd": 0.0089
+      },
+      "balanced_accuracy": {
+       "mean": 0.8328,
+       "sd": 0.0116
+      },
+      "precision": {
+       "mean": 0.8584,
+       "sd": 0.0234
+      },
+      "recall": {
+       "mean": 0.7222,
+       "sd": 0.025
+      },
+      "f1": {
+       "mean": 0.784,
+       "sd": 0.0159
+      },
+      "roc_auc": {
+       "mean": 0.917,
+       "sd": 0.0074
+      },
+      "pr_auc": {
+       "mean": 0.8749,
+       "sd": 0.0121
+      },
+      "brier": {
+       "mean": 0.0954,
+       "sd": 0.0048
+      }
+     },
+     "p_vs_best": 0.4803,
+     "is_best_default": false
+    },
+    {
+     "key": "naive_bayes",
+     "label": "Naive Bayes",
+     "description": "Probabilistic model that assumes independent features.",
+     "complexity": 1,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8283,
+       "sd": 0.0144
+      },
+      "balanced_accuracy": {
+       "mean": 0.8119,
+       "sd": 0.012
+      },
+      "precision": {
+       "mean": 0.7193,
+       "sd": 0.029
+      },
+      "recall": {
+       "mean": 0.7661,
+       "sd": 0.0182
+      },
+      "f1": {
+       "mean": 0.7416,
+       "sd": 0.017
+      },
+      "roc_auc": {
+       "mean": 0.8815,
+       "sd": 0.0097
+      },
+      "pr_auc": {
+       "mean": 0.7957,
+       "sd": 0.024
+      },
+      "brier": {
+       "mean": 0.1594,
+       "sd": 0.0132
+      }
+     },
+     "p_vs_best": 0.0,
+     "is_best_default": false
+    },
+    {
+     "key": "decision_tree",
+     "label": "Decision Tree",
+     "description": "A readable set of if-then rules.",
+     "complexity": 2,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8074,
+       "sd": 0.0131
+      },
+      "balanced_accuracy": {
+       "mean": 0.783,
+       "sd": 0.0138
+      },
+      "precision": {
+       "mean": 0.6951,
+       "sd": 0.0244
+      },
+      "recall": {
+       "mean": 0.7148,
+       "sd": 0.0221
+      },
+      "f1": {
+       "mean": 0.7046,
+       "sd": 0.0188
+      },
+      "roc_auc": {
+       "mean": 0.783,
+       "sd": 0.0138
+      },
+      "pr_auc": {
+       "mean": 0.5886,
+       "sd": 0.0214
+      },
+      "brier": {
+       "mean": 0.1926,
+       "sd": 0.0131
+      }
+     },
+     "p_vs_best": 0.0,
+     "is_best_default": false
+    },
+    {
+     "key": "knn",
+     "label": "k-Nearest Neighbours",
+     "description": "Predicts from the most similar past students.",
+     "complexity": 3,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8553,
+       "sd": 0.0069
+      },
+      "balanced_accuracy": {
+       "mean": 0.8095,
+       "sd": 0.0091
+      },
+      "precision": {
+       "mean": 0.8386,
+       "sd": 0.0195
+      },
+      "recall": {
+       "mean": 0.6812,
+       "sd": 0.0199
+      },
+      "f1": {
+       "mean": 0.7515,
+       "sd": 0.0127
+      },
+      "roc_auc": {
+       "mean": 0.8758,
+       "sd": 0.0108
+      },
+      "pr_auc": {
+       "mean": 0.7914,
+       "sd": 0.0171
+      },
+      "brier": {
+       "mean": 0.1152,
+       "sd": 0.0055
+      }
+     },
+     "p_vs_best": 0.0,
+     "is_best_default": false
+    },
+    {
+     "key": "svm_rbf",
+     "label": "Support Vector Machine (RBF)",
+     "description": "Non-linear boundary; strong on small tables, slower to train.",
+     "complexity": 4,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8721,
+       "sd": 0.0055
+      },
+      "balanced_accuracy": {
+       "mean": 0.8288,
+       "sd": 0.0083
+      },
+      "precision": {
+       "mean": 0.8702,
+       "sd": 0.0165
+      },
+      "recall": {
+       "mean": 0.7077,
+       "sd": 0.0202
+      },
+      "f1": {
+       "mean": 0.7803,
+       "sd": 0.0109
+      },
+      "roc_auc": {
+       "mean": 0.9093,
+       "sd": 0.007
+      },
+      "pr_auc": {
+       "mean": 0.8677,
+       "sd": 0.0135
+      },
+      "brier": {
+       "mean": null,
+       "sd": null
+      }
+     },
+     "p_vs_best": 0.0041,
+     "is_best_default": false
+    },
+    {
+     "key": "random_forest",
+     "label": "Random Forest",
+     "description": "Many decision trees voting together.",
+     "complexity": 5,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8724,
+       "sd": 0.0075
+      },
+      "balanced_accuracy": {
+       "mean": 0.8375,
+       "sd": 0.0082
+      },
+      "precision": {
+       "mean": 0.8439,
+       "sd": 0.0204
+      },
+      "recall": {
+       "mean": 0.7401,
+       "sd": 0.0157
+      },
+      "f1": {
+       "mean": 0.7884,
+       "sd": 0.0117
+      },
+      "roc_auc": {
+       "mean": 0.9194,
+       "sd": 0.008
+      },
+      "pr_auc": {
+       "mean": 0.8718,
+       "sd": 0.0138
+      },
+      "brier": {
+       "mean": 0.0957,
+       "sd": 0.0048
+      }
+     },
+     "p_vs_best": null,
+     "is_best_default": true
+    },
+    {
+     "key": "extra_trees",
+     "label": "Extra Trees",
+     "description": "Like a random forest with extra randomness.",
+     "complexity": 5,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8615,
+       "sd": 0.0082
+      },
+      "balanced_accuracy": {
+       "mean": 0.8263,
+       "sd": 0.0089
+      },
+      "precision": {
+       "mean": 0.8217,
+       "sd": 0.0239
+      },
+      "recall": {
+       "mean": 0.7276,
+       "sd": 0.0196
+      },
+      "f1": {
+       "mean": 0.7715,
+       "sd": 0.0126
+      },
+      "roc_auc": {
+       "mean": 0.9118,
+       "sd": 0.0094
+      },
+      "pr_auc": {
+       "mean": 0.8592,
+       "sd": 0.0131
+      },
+      "brier": {
+       "mean": 0.1017,
+       "sd": 0.0049
+      }
+     },
+     "p_vs_best": 0.0018,
+     "is_best_default": false
+    },
+    {
+     "key": "gradient_boosting",
+     "label": "Gradient Boosting",
+     "description": "Trees built one after another, each fixing the last one's errors.",
+     "complexity": 6,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8702,
+       "sd": 0.0095
+      },
+      "balanced_accuracy": {
+       "mean": 0.8358,
+       "sd": 0.0109
+      },
+      "precision": {
+       "mean": 0.8376,
+       "sd": 0.0225
+      },
+      "recall": {
+       "mean": 0.7399,
+       "sd": 0.0195
+      },
+      "f1": {
+       "mean": 0.7854,
+       "sd": 0.0154
+      },
+      "roc_auc": {
+       "mean": 0.9141,
+       "sd": 0.0078
+      },
+      "pr_auc": {
+       "mean": 0.8716,
+       "sd": 0.0145
+      },
+      "brier": {
+       "mean": 0.0985,
+       "sd": 0.0063
+      }
+     },
+     "p_vs_best": 0.0396,
+     "is_best_default": false
+    },
+    {
+     "key": "neural_net",
+     "label": "Neural Network (MLP)",
+     "description": "Small multi-layer network.",
+     "complexity": 7,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8733,
+       "sd": 0.0068
+      },
+      "balanced_accuracy": {
+       "mean": 0.833,
+       "sd": 0.0081
+      },
+      "precision": {
+       "mean": 0.8636,
+       "sd": 0.0226
+      },
+      "recall": {
+       "mean": 0.7201,
+       "sd": 0.0187
+      },
+      "f1": {
+       "mean": 0.785,
+       "sd": 0.0112
+      },
+      "roc_auc": {
+       "mean": 0.9175,
+       "sd": 0.0072
+      },
+      "pr_auc": {
+       "mean": 0.875,
+       "sd": 0.0115
+      },
+      "brier": {
+       "mean": 0.0954,
+       "sd": 0.0047
+      }
+     },
+     "p_vs_best": 0.6213,
+     "is_best_default": false
+    }
+   ],
+   "tuned": [
+    {
+     "key": "random_forest",
+     "label": "Random Forest",
+     "complexity": 5,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8749,
+       "sd": 0.0075
+      },
+      "balanced_accuracy": {
+       "mean": 0.8383,
+       "sd": 0.0143
+      },
+      "precision": {
+       "mean": 0.8547,
+       "sd": 0.0125
+      },
+      "recall": {
+       "mean": 0.7361,
+       "sd": 0.0346
+      },
+      "f1": {
+       "mean": 0.7904,
+       "sd": 0.0173
+      },
+      "roc_auc": {
+       "mean": 0.921,
+       "sd": 0.0046
+      },
+      "pr_auc": {
+       "mean": 0.8781,
+       "sd": 0.0113
+      },
+      "brier": {
+       "mean": 0.0945,
+       "sd": 0.0039
+      }
+     },
+     "p_vs_best": null,
+     "within_one_se": true,
+     "is_best": true
+    },
+    {
+     "key": "gradient_boosting",
+     "label": "Gradient Boosting",
+     "complexity": 6,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8748,
+       "sd": 0.0089
+      },
+      "balanced_accuracy": {
+       "mean": 0.8398,
+       "sd": 0.0146
+      },
+      "precision": {
+       "mean": 0.8492,
+       "sd": 0.0107
+      },
+      "recall": {
+       "mean": 0.7421,
+       "sd": 0.0317
+      },
+      "f1": {
+       "mean": 0.7917,
+       "sd": 0.0185
+      },
+      "roc_auc": {
+       "mean": 0.9189,
+       "sd": 0.0078
+      },
+      "pr_auc": {
+       "mean": 0.8765,
+       "sd": 0.0149
+      },
+      "brier": {
+       "mean": 0.0949,
+       "sd": 0.0046
+      }
+     },
+     "p_vs_best": 0.4634,
+     "within_one_se": false,
+     "is_best": false
+    },
+    {
+     "key": "logistic",
+     "label": "Logistic Regression",
+     "complexity": 1,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8721,
+       "sd": 0.0102
+      },
+      "balanced_accuracy": {
+       "mean": 0.8314,
+       "sd": 0.0151
+      },
+      "precision": {
+       "mean": 0.8609,
+       "sd": 0.0158
+      },
+      "recall": {
+       "mean": 0.7178,
+       "sd": 0.0305
+      },
+      "f1": {
+       "mean": 0.7825,
+       "sd": 0.0202
+      },
+      "roc_auc": {
+       "mean": 0.9169,
+       "sd": 0.0071
+      },
+      "pr_auc": {
+       "mean": 0.8744,
+       "sd": 0.0122
+      },
+      "brier": {
+       "mean": 0.0953,
+       "sd": 0.0047
+      }
+     },
+     "p_vs_best": 0.1846,
+     "within_one_se": false,
+     "is_best": false
+    },
+    {
+     "key": "neural_net",
+     "label": "Neural Network (MLP)",
+     "complexity": 7,
+     "metrics": {
+      "accuracy": {
+       "mean": 0.8739,
+       "sd": 0.0093
+      },
+      "balanced_accuracy": {
+       "mean": 0.8348,
+       "sd": 0.0141
+      },
+      "precision": {
+       "mean": 0.8601,
+       "sd": 0.0151
+      },
+      "recall": {
+       "mean": 0.7255,
+       "sd": 0.0295
+      },
+      "f1": {
+       "mean": 0.7868,
+       "sd": 0.0184
+      },
+      "roc_auc": {
+       "mean": 0.9164,
+       "sd": 0.0089
+      },
+      "pr_auc": {
+       "mean": 0.8717,
+       "sd": 0.0146
+      },
+      "brier": {
+       "mean": 0.0958,
+       "sd": 0.0053
+      }
+     },
+     "p_vs_best": 0.2573,
+     "within_one_se": false,
+     "is_best": false
+    }
+   ],
+   "best_default": "random_forest",
+   "best_tuned": "random_forest",
+   "selected": "random_forest",
+   "selected_label": "Random Forest",
+   "selected_params": {
+    "min_samples_leaf": 2,
+    "max_depth": null
+   },
+   "se_used": 0.00145,
+   "rule": "highest mean roc_auc, then the simplest model within one standard error of it",
+   "n": 4424,
+   "positive_rate": 0.3212,
+   "examination": {
+    "thresholds": [
+     {
+      "threshold": 0.2,
+      "accuracy": 0.814,
+      "precision": 0.653,
+      "recall": 0.895,
+      "f1": 0.755
+     },
+     {
+      "threshold": 0.3,
+      "accuracy": 0.854,
+      "precision": 0.743,
+      "recall": 0.837,
+      "f1": 0.787
+     },
+     {
+      "threshold": 0.4,
+      "accuracy": 0.869,
+      "precision": 0.802,
+      "recall": 0.787,
+      "f1": 0.794
+     },
+     {
+      "threshold": 0.5,
+      "accuracy": 0.876,
+      "precision": 0.854,
+      "recall": 0.742,
+      "f1": 0.794
+     },
+     {
+      "threshold": 0.6,
+      "accuracy": 0.876,
+      "precision": 0.892,
+      "recall": 0.697,
+      "f1": 0.783
+     }
+    ],
+    "calibration": [
+     {
+      "bin": "0.0-0.1",
+      "predicted": 0.041,
+      "observed": 0.044,
+      "n": 1854
+     },
+     {
+      "bin": "0.1-0.2",
+      "predicted": 0.143,
+      "observed": 0.109,
+      "n": 623
+     },
+     {
+      "bin": "0.2-0.3",
+      "predicted": 0.242,
+      "observed": 0.24,
+      "n": 346
+     },
+     {
+      "bin": "0.3-0.4",
+      "predicted": 0.345,
+      "observed": 0.341,
+      "n": 205
+     },
+     {
+      "bin": "0.4-0.5",
+      "predicted": 0.448,
+      "observed": 0.401,
+      "n": 162
+     },
+     {
+      "bin": "0.5-0.6",
+      "predicted": 0.549,
+      "observed": 0.512,
+      "n": 123
+     },
+     {
+      "bin": "0.6-0.7",
+      "predicted": 0.645,
+      "observed": 0.683,
+      "n": 145
+     },
+     {
+      "bin": "0.7-0.8",
+      "predicted": 0.747,
+      "observed": 0.777,
+      "n": 139
+     },
+     {
+      "bin": "0.8-0.9",
+      "predicted": 0.857,
+      "observed": 0.909,
+      "n": 242
+     },
+     {
+      "bin": "0.9-1.0",
+      "predicted": 0.958,
+      "observed": 0.964,
+      "n": 585
+     }
+    ],
+    "brier": 0.0933,
+    "confusion": {
+     "tn": 2823,
+     "fp": 180,
+     "fn": 367,
+     "tp": 1054
+    },
+    "importance": [
+     {
+      "feature": "s2_completion",
+      "drop_in_auc": 0.04,
+      "sd": 0.0052
+     },
+     {
+      "feature": "tuition_paid",
+      "drop_in_auc": 0.0268,
+      "sd": 0.004
+     },
+     {
+      "feature": "s2_approved",
+      "drop_in_auc": 0.0171,
+      "sd": 0.0035
+     },
+     {
+      "feature": "s1_completion",
+      "drop_in_auc": 0.0122,
+      "sd": 0.0037
+     },
+     {
+      "feature": "s2_mark",
+      "drop_in_auc": 0.0111,
+      "sd": 0.0025
+     },
+     {
+      "feature": "programme",
+      "drop_in_auc": 0.0056,
+      "sd": 0.001
+     },
+     {
+      "feature": "gender",
+      "drop_in_auc": 0.0046,
+      "sd": 0.0012
+     },
+     {
+      "feature": "s1_mark",
+      "drop_in_auc": 0.0028,
+      "sd": 0.0012
+     },
+     {
+      "feature": "debtor",
+      "drop_in_auc": 0.0026,
+      "sd": 0.0017
+     },
+     {
+      "feature": "scholarship",
+      "drop_in_auc": 0.0024,
+      "sd": 0.0009
+     }
+    ],
+    "learning_curve": {
+     "sizes": [
+      353,
+      884,
+      1769,
+      2654,
+      3539
+     ],
+     "train": [
+      0.9931,
+      0.9943,
+      0.9949,
+      0.9942,
+      0.994
+     ],
+     "validation": [
+      0.9049,
+      0.9129,
+      0.9193,
+      0.9205,
+      0.9227
+     ]
+    }
+   }
+  }
+ },
+ "regression": {
+  "candidates": [
+   {
+    "key": "mean",
+    "label": "Mean baseline",
+    "description": "Always predicts the average mark.",
+    "complexity": 0,
+    "metrics": {
+     "rmse": {
+      "mean": 6.8592,
+      "sd": 0.1114
+     },
+     "mae": {
+      "mean": 5.5261,
+      "sd": 0.1059
+     },
+     "r2": {
+      "mean": -0.0021,
+      "sd": 0.0018
+     }
+    },
+    "p_vs_best": 0.0,
+    "is_best_default": false
+   },
+   {
+    "key": "linear",
+    "label": "Linear Regression",
+    "description": "Straight-line relationship.",
+    "complexity": 1,
+    "metrics": {
+     "rmse": {
+      "mean": 4.837,
+      "sd": 0.1788
+     },
+     "mae": {
+      "mean": 3.7462,
+      "sd": 0.1111
+     },
+     "r2": {
+      "mean": 0.5012,
+      "sd": 0.0331
+     }
+    },
+    "p_vs_best": 0.2989,
+    "is_best_default": false
+   },
+   {
+    "key": "ridge",
+    "label": "Ridge Regression",
+    "description": "Linear regression with a penalty against over-fitting.",
+    "complexity": 1,
+    "metrics": {
+     "rmse": {
+      "mean": 4.8364,
+      "sd": 0.1786
+     },
+     "mae": {
+      "mean": 3.7457,
+      "sd": 0.1107
+     },
+     "r2": {
+      "mean": 0.5013,
+      "sd": 0.033
+     }
+    },
+    "p_vs_best": null,
+    "is_best_default": true
+   },
+   {
+    "key": "knn",
+    "label": "k-Nearest Neighbours",
+    "description": "Average of similar students.",
+    "complexity": 3,
+    "metrics": {
+     "rmse": {
+      "mean": 5.1915,
+      "sd": 0.1473
+     },
+     "mae": {
+      "mean": 3.98,
+      "sd": 0.1092
+     },
+     "r2": {
+      "mean": 0.4255,
+      "sd": 0.0311
+     }
+    },
+    "p_vs_best": 0.0,
+    "is_best_default": false
+   },
+   {
+    "key": "random_forest",
+    "label": "Random Forest",
+    "description": "Many trees averaged.",
+    "complexity": 5,
+    "metrics": {
+     "rmse": {
+      "mean": 4.8609,
+      "sd": 0.133
+     },
+     "mae": {
+      "mean": 3.7026,
+      "sd": 0.0971
+     },
+     "r2": {
+      "mean": 0.4964,
+      "sd": 0.0254
+     }
+    },
+    "p_vs_best": 0.5894,
+    "is_best_default": false
+   },
+   {
+    "key": "gradient_boosting",
+    "label": "Gradient Boosting",
+    "description": "Trees built one after another.",
+    "complexity": 6,
+    "metrics": {
+     "rmse": {
+      "mean": 4.8421,
+      "sd": 0.1349
+     },
+     "mae": {
+      "mean": 3.6902,
+      "sd": 0.0917
+     },
+     "r2": {
+      "mean": 0.5003,
+      "sd": 0.0247
+     }
+    },
+    "p_vs_best": 0.8884,
+    "is_best_default": false
+   }
+  ],
+  "tuned": [
+   {
+    "key": "gradient_boosting",
+    "label": "Gradient Boosting",
+    "complexity": 6,
+    "metrics": {
+     "rmse": {
+      "mean": 4.6971,
+      "sd": 0.1141
+     },
+     "mae": {
+      "mean": 3.604,
+      "sd": 0.1015
+     },
+     "r2": {
+      "mean": 0.5295,
+      "sd": 0.0229
+     }
+    },
+    "p_vs_best": null,
+    "within_one_se": true,
+    "is_best": true
+   },
+   {
+    "key": "random_forest",
+    "label": "Random Forest",
+    "complexity": 5,
+    "metrics": {
+     "rmse": {
+      "mean": 4.7527,
+      "sd": 0.1442
+     },
+     "mae": {
+      "mean": 3.6303,
+      "sd": 0.137
+     },
+     "r2": {
+      "mean": 0.5182,
+      "sd": 0.0273
+     }
+    },
+    "p_vs_best": 0.0684,
+    "within_one_se": false,
+    "is_best": false
+   },
+   {
+    "key": "ridge",
+    "label": "Ridge Regression",
+    "complexity": 1,
+    "metrics": {
+     "rmse": {
+      "mean": 4.8365,
+      "sd": 0.0789
+     },
+     "mae": {
+      "mean": 3.7458,
+      "sd": 0.0856
+     },
+     "r2": {
+      "mean": 0.5011,
+      "sd": 0.0205
+     }
+    },
+    "p_vs_best": 0.0038,
+    "within_one_se": false,
+    "is_best": false
+   },
+   {
+    "key": "linear",
+    "label": "Linear Regression",
+    "complexity": 1,
+    "metrics": {
+     "rmse": {
+      "mean": 4.8367,
+      "sd": 0.0845
+     },
+     "mae": {
+      "mean": 3.7447,
+      "sd": 0.0893
+     },
+     "r2": {
+      "mean": 0.5011,
+      "sd": 0.0201
+     }
+    },
+    "p_vs_best": 0.0045,
+    "within_one_se": false,
+    "is_best": false
+   }
+  ],
+  "best_default": "ridge",
+  "best_tuned": "gradient_boosting",
+  "selected": "gradient_boosting",
+  "selected_label": "Gradient Boosting",
+  "selected_params": {
+   "max_depth": 3,
+   "learning_rate": 0.1,
+   "l2_regularization": 1.0
+  },
+  "se_used": 0.03608,
+  "rule": "highest mean rmse, then the simplest model within one standard error of it",
+  "n": 3512,
+  "target_sd": 6.857,
+  "examination": {
+   "within_5_marks": 0.722,
+   "within_10_marks": 0.964,
+   "mean_error": -0.018
+  }
+ }
+}

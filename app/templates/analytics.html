@@ -3,130 +3,41 @@
 {% block page_title %}Performance Analytics{% endblock %}
 
 {% block content %}
+{% if not data %}<div class="alert alert-warning mt-3">No data available.</div>{% else %}
+{% macro rate_chart(title, g, note='') %}
+<div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-header">{{ title }}</div><div class="card-body">
+  <div class="chart-box"><canvas data-chart="bar" data-labels='{{ g.labels|tojson }}' data-values='{{ g.dropout_rate|tojson }}' data-label="Dropout rate (%)" data-unit="%" data-color="#dc3545"></canvas></div>
+  <p class="small text-muted mt-2 mb-0">{% for l, n in g.labels|zip(g.size) %}{{ l }}: {{ n }} students{{ ' · ' if not loop.last }}{% endfor %}{{ ' ' ~ note }}</p></div></div></div>
+{% endmacro %}
 <div class="row g-4 mt-1">
+  <div class="col-12"><div class="alert alert-secondary mb-0 small">
+    Each chart shows the share of students who <strong>withdrew</strong> in each group. Differences describe the data; they do not prove cause.</div></div>
 
-  <div class="col-12 col-lg-6">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-chart-column text-primary"></i><span class="fw-semibold">Final Grade Distribution (0-20)</span>
-      </div>
-      <div class="card-body chart-wrapper"><canvas id="histChart"></canvas></div>
-    </div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-language text-info"></i><span class="fw-semibold">Pass Rate by Subject</span>
-      </div>
-      <div class="card-body chart-wrapper"><canvas id="subjectChart"></canvas></div>
-    </div>
-  </div>
+  {{ rate_chart('By course completion (all semesters)', data.completion, 'The strongest signal in the data.') }}
+  {{ rate_chart('By tuition fees', data.tuition_paid) }}
+  {{ rate_chart('By scholarship', data.scholarship) }}
+  {{ rate_chart('By debt', data.debtor) }}
+  {{ rate_chart('By age at enrolment', data.age) }}
+  {{ rate_chart('By attendance', data.attendance) }}
+  {{ rate_chart('By gender', data.gender) }}
 
-  <div class="col-12 col-lg-6">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-clock text-success"></i><span class="fw-semibold">Pass Rate by Weekly Study Time</span>
-      </div>
-      <div class="card-body chart-wrapper"><canvas id="studyChart"></canvas></div>
-    </div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-rotate-left text-danger"></i><span class="fw-semibold">Pass Rate by Past Class Failures</span>
-      </div>
-      <div class="card-body chart-wrapper"><canvas id="failuresChart"></canvas></div>
-    </div>
-  </div>
+  <div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-header">CGPA distribution</div><div class="card-body">
+    <div class="chart-box"><canvas data-chart="bar" data-labels='{{ data.cgpa_hist_labels|tojson }}' data-values='{{ data.cgpa_hist_values|tojson }}' data-label="Students" data-unit="Students"></canvas></div></div></div></div>
 
-  <div class="col-12 col-lg-6">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-graduation-cap text-warning"></i><span class="fw-semibold">Pass Rate by Higher-Education Plans</span>
-      </div>
-      <div class="card-body chart-wrapper"><canvas id="higherChart"></canvas></div>
-    </div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-venus-mars text-secondary"></i><span class="fw-semibold">Gender Comparison</span>
-      </div>
-      <div class="card-body chart-wrapper"><canvas id="genderChart"></canvas></div>
-    </div>
-  </div>
+  <div class="col-12"><div class="card"><div class="card-header">Dropout rate by programme (programmes with 40+ students)</div><div class="card-body">
+    <div class="chart-box tall"><canvas data-chart="bar" data-labels='{{ data.programme.labels|tojson }}' data-values='{{ data.programme.dropout_rate|tojson }}' data-label="Dropout rate (%)" data-color="#dc3545"></canvas></div></div></div></div>
 
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-chart-scatter text-info"></i><span class="fw-semibold">Absences vs Final Grade (random sample of 250)</span>
-      </div>
-      <div class="card-body chart-wrapper"><canvas id="scatterChart"></canvas></div>
-    </div>
-  </div>
+  {% set pts = [{'label': 'Stayed', 'data': [], 'color': '#20c997'}, {'label': 'Withdrew', 'data': [], 'color': '#dc3545'}] %}
+  {% for x, y, d in data.scatter_s1|zip(data.scatter_s2, data.scatter_dropout) %}{% set _ = pts[d].data.append({'x': x, 'y': y}) %}{% endfor %}
+  <div class="col-lg-7"><div class="card h-100"><div class="card-header">Semester 1 vs semester 2 mark (300 students who passed courses in both)</div><div class="card-body">
+    <div class="chart-box tall"><canvas data-chart="scatter" data-points='{{ pts|tojson }}' data-xtitle="Semester 1 mark" data-unit="Semester 2 mark"></canvas></div></div></div></div>
 
-  <div class="col-12 col-lg-6">
-    <div class="card h-100">
-      <div class="card-header fw-semibold"><i class="fa-solid fa-trophy text-warning me-2"></i>Top Final Grades</div>
-      <div class="card-body p-0"><table class="table table-sm mb-0">
-        <thead><tr><th>Student</th><th>Subject</th><th>G3</th><th>Grade</th></tr></thead>
-        <tbody>{% for s in data.get('top_performers', []) %}
-          <tr><td>{{ s.name }}</td><td>{{ s.subject }}</td><td>{{ s.G3 | int }}</td><td><span class="badge grade-badge grade-{{ s.grade_letter }}">{{ s.grade_letter }}</span></td></tr>
-        {% endfor %}</tbody></table></div>
-    </div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <div class="card h-100">
-      <div class="card-header fw-semibold"><i class="fa-solid fa-arrow-down-wide-short text-danger me-2"></i>Lowest Final Grades</div>
-      <div class="card-body p-0"><table class="table table-sm mb-0">
-        <thead><tr><th>Student</th><th>Subject</th><th>G3</th><th>Grade</th></tr></thead>
-        <tbody>{% for s in data.get('bottom_performers', []) %}
-          <tr><td>{{ s.name }}</td><td>{{ s.subject }}</td><td>{{ s.G3 | int }}</td><td><span class="badge grade-badge grade-{{ s.grade_letter }}">{{ s.grade_letter }}</span></td></tr>
-        {% endfor %}</tbody></table></div>
-    </div>
-  </div>
+  <div class="col-lg-5"><div class="card h-100"><div class="card-header">Highest and lowest CGPA (students with courses)</div><div class="card-body p-0">
+    <table class="table table-sm mb-0"><thead><tr><th>Student</th><th>Programme</th><th>CGPA</th></tr></thead><tbody>
+    {% for s in data.top %}<tr><td>{{ s.name }}</td><td class="small">{{ s.programme }}</td><td class="text-success">{{ '%.2f'|format(s.cgpa) }}</td></tr>{% endfor %}
+    <tr><td colspan="3" class="text-center text-muted small">...</td></tr>
+    {% for s in data.bottom %}<tr><td>{{ s.name }}</td><td class="small">{{ s.programme }}</td><td class="text-danger">{{ '%.2f'|format(s.cgpa) }}</td></tr>{% endfor %}
+    </tbody></table></div></div></div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-const d = {{ data | tojson }};
-const blue = '#0d6efd', green = '#198754', red = '#dc3545', amber = '#ffc107', cyan = '#0dcaf0';
-
-function bar(id, labels, sets, max) {
-  new Chart(document.getElementById(id), {
-    type: 'bar',
-    data: { labels: labels || [], datasets: sets.map(s => ({ ...s, borderRadius: 6 })) },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: sets.length > 1 } },
-      scales: { y: { beginAtZero: true, max: max } } }
-  });
-}
-
-bar('histChart', d.grade_hist_labels, [{ label: 'Students', data: d.grade_hist_values, backgroundColor: blue }]);
-bar('subjectChart', d.subject_labels, [
-  { label: 'Pass rate %', data: d.subject_pass_rate, backgroundColor: green },
-  { label: 'Avg final grade (x5)', data: (d.subject_avg_grade || []).map(v => v * 5), backgroundColor: cyan },
-], 100);
-bar('studyChart', d.studytime_labels, [{ label: 'Pass rate %', data: d.studytime_pass_rate, backgroundColor: green }], 100);
-bar('failuresChart', d.failures_labels, [{ label: 'Pass rate %', data: d.failures_pass_rate, backgroundColor: red }], 100);
-bar('higherChart', d.higher_labels, [{ label: 'Pass rate %', data: d.higher_pass_rate, backgroundColor: amber }], 100);
-bar('genderChart', d.gender_labels, [
-  { label: 'Pass rate %', data: d.gender_pass_rate, backgroundColor: green },
-  { label: 'Avg final grade (x5)', data: (d.gender_avg_grade || []).map(v => v * 5), backgroundColor: cyan },
-], 100);
-
-new Chart(document.getElementById('scatterChart'), {
-  type: 'scatter',
-  data: { datasets: [{
-    label: 'Students',
-    data: (d.scatter_absences || []).map((x, i) => ({ x: x, y: d.scatter_grade[i] })),
-    backgroundColor: 'rgba(13,202,240,0.6)',
-  }]},
-  options: { responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: { x: { title: { display: true, text: 'Absences' } },
-              y: { title: { display: true, text: 'Final grade (0-20)' }, min: 0, max: 20 } } }
-});
-</script>
+{% endif %}
 {% endblock %}

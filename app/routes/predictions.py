@@ -1,103 +1,65 @@
 """
-Predictions route: run the ML models for one student and show cross-validated metrics.
+Prediction tool and model-selection results.
+
+The "try a student" calculator is public on purpose: it stores nothing, it only runs the
+chosen model and the explainable calculations on the numbers typed in.
 """
 
-import json
+import pandas as pd
+from flask import Blueprint, render_template, request
 
-from flask import Blueprint, flash, render_template, request
-
-from app.data.data_loader import load_students
-from app.ml.predictor import get_model_metrics, get_training_size, predict_student
+from app import grading
+from app.data.analytics_calc import build_class_stats, calculate_student_indicators, recommend_student
+from app.data.data_loader import _compute_derived_columns, load_students
+from app.ml.predictor import get_training_size, load_selection, predict_student
+from app.ml.preprocessing import SCENARIOS
+from app.routes.students import CHOICE_FIELDS, NUMBER_FIELDS, parse_student_form
 
 predictions_bp = Blueprint("predictions", __name__, url_prefix="/predictions")
 
-# Inputs shown on the prediction form: (field, minimum, maximum)
-NUMERIC_INPUTS = {
-    "age": (10, 30),
-    "studytime": (1, 4),
-    "failures": (0, 4),
-    "absences": (0, 100),
-    "G1": (0, 20),
-    "G2": (0, 20),
-}
-CHOICES = {
-    "subject": ("Math", "Portuguese"),
-    "gender": ("Male", "Female"),
-    "higher": ("yes", "no"),
-    "internet": ("yes", "no"),
-}
 DEFAULTS = {
-    "subject": "Math", "gender": "Female", "higher": "yes", "internet": "yes",
-    "age": 17, "studytime": 2, "failures": 0, "absences": 4, "G1": 10, "G2": 10,
+    "gender": "Female", "programme": "Informatics Engineering", "attendance": "Daytime",
+    "scholarship": "no", "tuition_paid": "yes", "debtor": "no", "age": 19,
+    "admission_mark": 63, "prev_mark": 62,
+    "s1_enrolled": 6, "s1_approved": 5, "s1_mark": 62,
+    "s2_enrolled": 0, "s2_approved": 0, "s2_mark": 0,
 }
 
 
 @predictions_bp.route("/", methods=["GET", "POST"])
 def predictions():
-    metrics = get_model_metrics()
-    prediction_results = None
+    study = load_selection()
     form_data = dict(DEFAULTS)
-    selected_student = None
-
-    # Dropdown of existing students (id, name, subject only: keeps the page light)
-    df = load_students()
-    students = []
-    if not df.empty:
-        students = df[["student_id", "name", "subject"]].to_dict("records")
+    result = report = None
+    error = None
 
     if request.method == "POST":
-        student_id = request.form.get("student_id", "").strip()
-
-        if student_id and not df.empty:
-            try:
-                sid = int(student_id)
-            except ValueError:
-                sid = -1
-            row = df[df["student_id"] == sid]
-            if row.empty:
-                flash("Student not found.", "warning")
+        submitted = request.form.to_dict()
+        form_data.update({k: submitted.get(k, form_data.get(k)) for k in DEFAULTS})
+        data, error = parse_student_form({**submitted, "outcome": "Enrolled", "name": ""})
+        if not error:
+            record = _compute_derived_columns(pd.DataFrame([{**data, "outcome": "Enrolled"}])).iloc[0].to_dict()
+            record = {k: (None if isinstance(v, float) and v != v else v) for k, v in record.items()}
+            result = predict_student(record)
+            if "error" in result:
+                error, result = result["error"], None
             else:
-                selected_student = row.iloc[0].to_dict()
-                form_data = {k: selected_student.get(k, v) for k, v in DEFAULTS.items()}
-                form_data["student_id"] = sid
-        else:
-            form_data = _read_custom_form(request.form)
+                df = load_students()
+                class_stats = build_class_stats(df) if not df.empty else {}
+                indicators = calculate_student_indicators(record, class_stats)
+                report = {"indicators": indicators, "suggestions": recommend_student(record, class_stats, indicators, result),
+                          "student": record}
 
-        if selected_student is not None or request.form.get("mode") != "student":
-            raw = predict_student(form_data)
-            if "error" in raw:
-                flash(raw["error"], "warning")
-            else:
-                prediction_results = raw
-
+    clf = study.get("classification", {})
     return render_template(
-        "predictions.html",
-        metrics=metrics,
-        metrics_json=json.dumps(metrics),
-        prediction_results=prediction_results,
-        form_data=form_data,
-        students=students,
-        selected_student=selected_student,
-        training_size=get_training_size(),
-        choices=CHOICES,
-        ranges=NUMERIC_INPUTS,
+        "predictions.html", study=study, scenarios=SCENARIOS, clf=clf, reg=study.get("regression"),
+        form=form_data, result=result, report=report, error=error, choices=CHOICE_FIELDS,
+        number_fields=NUMBER_FIELDS, training_size=get_training_size(),
     )
 
 
-def _read_custom_form(form) -> dict:
-    """Read the hypothetical-student form, clamping every value to its valid range."""
-    data = {}
-    for key, allowed in CHOICES.items():
-        value = form.get(key, DEFAULTS[key])
-        data[key] = value if value in allowed else DEFAULTS[key]
-    for key, (lo, hi) in NUMERIC_INPUTS.items():
-        data[key] = _clamp(form.get(key), lo, hi, DEFAULTS[key])
-    return data
-
-
-def _clamp(value, lo, hi, default):
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return default
-    return int(min(hi, max(lo, number)))
+@predictions_bp.route("/selection")
+def model_selection():
+    study = load_selection()
+    return render_template("model_selection.html", study=study, scenarios=SCENARIOS,
+                           scale=grading.scale_table())

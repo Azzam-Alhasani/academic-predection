@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Audit log{% endblock %}
+{% block page_title %}Audit log{% endblock %}
+{% block content %}
+<div class="card mt-3"><div class="card-header">Latest {{ events|length }} events (newest first)</div>
+  <div class="table-responsive"><table class="table table-sm table-hover mb-0 small"><thead><tr><th>Time</th><th>User</th><th>IP</th><th>Action</th><th>Detail</th></tr></thead><tbody>
+  {% for e in events %}<tr class="{{ 'text-danger' if e.action in ['login_failed', 'login_blocked', 'access_denied'] }}"><td>{{ e.time }}</td><td>{{ e.user }}</td><td>{{ e.ip }}</td><td>{{ e.action }}</td><td>{{ e.detail }}</td></tr>
+  {% else %}<tr><td colspan="5" class="text-center text-muted py-4">No events yet.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+{% endblock %}
