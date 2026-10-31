@@ -1,22 +1,24 @@
 # Academic Performance Monitoring & Prediction System
 
-A web application that tracks student results on a **UTAS-style grading scale** (letter grades, GPA, CGPA, academic standing), estimates the risk that a student withdraws, and sends each student explainable calculations and suggestions. Built with Flask, Pandas and Scikit-learn.
+A web application that tracks student results on a **UTAS-style grading scale** (letter grades, GPA, academic standing), estimates the chance that a student **fails a course**, and gives each student explainable calculations and suggestions. Built with Flask, Pandas and Scikit-learn.
+
+It looks at only what drives results: **term marks, absences and the final mark**. No age, gender, family, scholarship or fee data is used.
 
 > **Please read: what is real and what is assumed**
-> - **Data.** The records are the real UCI dataset *Predict Students' Dropout and Academic Success* (4,424 students, a Portuguese polytechnic, CC BY 4.0). It is **not UTAS data**. Marks (0-20) were converted to a 0-100 scale, so results show how the system behaves, not how UTAS students perform.
+> - **Data.** Real records from the UCI *Student Performance* dataset (two Portuguese secondary-school courses, Mathematics and Portuguese, 1,044 course records of 662 students, CC BY 4.0). It is **not UTAS data**. Marks (0-20) were converted to a 0-100 scale, so results show how the system behaves, not how UTAS students perform.
 > - **Grading scale.** The letter bands, grade points and standing thresholds in `app/grading.py` are **assumptions** based on a typical Omani 100-mark scale. No official UTAS table was available. Check them against the UTAS handbook and edit that one file; everything else follows.
-> - **Standing thresholds** (Good / Warning / Probation) were calibrated to the converted data. A 2.0 line would have put 59% of these students on probation.
+> - **Absences** are a count of classes missed, as recorded in the dataset. There is no total number of classes, so no attendance percentage is shown.
 
 ---
 
 ## Features
 
-- **Dashboard and analytics**: outcomes, CGPA bands, results by programme, risk by tuition/scholarship/debt (aggregates only).
-- **Student report** (staff, or the student for their own record): semester results, GPA/CGPA, completion rate, trend, safety margin, peer percentile, courses needed to pass, a **CGPA goal planner** and a printable report. Every figure shows its formula and working.
+- **Dashboard and analytics**: pass/fail, letter grades, chance of failing by term 1 mark, GPA, change between terms, absences and course (aggregates only).
+- **Student report** (staff, or the student for their own record): term results, GPA, average, trend, safety margin above the pass mark, peer percentile, absences, a **goal planner** (the final mark needed for a target average) and a printable report. Every figure shows its formula and working.
 - **Suggestions** ranked by priority, each with the reason and the calculation behind it.
-- **Risk calculator** (public, stores nothing): type in results, get the estimated withdrawal risk, the factors raising and lowering it, and the report.
+- **Risk calculator** (public, stores nothing): enter term 1 (and optionally term 2) and absences; get the estimated risk of failing, the factors raising and lowering it, a projected final mark, and the report.
 - **Model-selection analysis**: how the model was chosen and how accurate it is (below).
-- **Bayesian analysis**: P(Dropout | evidence) from the real records, with worked examples.
+- **Bayesian analysis**: P(Fail | evidence) from the real records, with worked examples.
 - **Roles**: admin, teacher, student. **Audit log** of logins and data changes.
 
 ---
@@ -31,7 +33,7 @@ A web application that tracks student results on a **UTAS-style grading scale** 
 | 75-79 | B | 3.0 | | 0-49 | F | 0.0 |
 | 70-74 | C+ | 2.5 | | | | |
 
-Pass mark 50. Semester GPA = grade points of the semester average x (courses passed / courses taken). CGPA = course-weighted mean of the semesters. Completion rate target 75%. The dataset has a semester average rather than per-course marks, so GPA is an approximation.
+Pass mark 50. **Term GPA** = grade points of the term mark. **GPA** = average of the term GPAs. Standing (assumed, scaled to the data): Good standing from 1.0, Academic warning from 0.5, otherwise Academic probation. In the data, GPA 1.0 or more almost never fails (about 1%); 0.5-1.0 fails about 3 in 10; under 0.5 about 8 in 10. With real UTAS marks use the handbook thresholds.
 
 ---
 
@@ -39,31 +41,37 @@ Pass mark 50. Semester GPA = grade points of the semester average x (courses pas
 
 | | |
 |---|---|
-| Source | Realinho, Machado, Baptista and Martins (2022), *Predict Students' Dropout and Academic Success*, Data 7(11):146. [UCI #697](https://archive.ics.uci.edu/dataset/697), CC BY 4.0 |
-| Records | 4,424 students, 17 programmes. Outcome: Graduate 49.9%, Dropout 32.1%, Enrolled 17.9% |
-| Used | age, gender, programme, attendance, admission and previous marks, scholarship, tuition paid, debt, courses taken/passed and average mark in semesters 1 and 2 |
-| Conversion | semester average 0-20 x 5 = mark out of 100; admission grade 0-200 / 2 |
+| Source | P. Cortez and A. Silva, *Using Data Mining to Predict Secondary School Student Performance*, FUBUTEC 2008. [UCI #320](https://archive.ics.uci.edu/dataset/320/student+performance), CC BY 4.0 |
+| Records | 395 Mathematics + 649 Portuguese = 1,044 course records; 382 students appear in both |
+| Kept | course, term 1 mark (`G1`), term 2 mark (`G2`), absences, final mark (`G3`) |
+| Dropped | everything else in the original files (age, sex, family, free time, alcohol ...) |
+| Conversion | mark out of 20 x 5 = mark out of 100. **Fail = final mark below 50** (22% of records) |
 
-Raw file: `app/data/raw/uci_dropout_success.csv`; `python app/data/prepare_real_data.py` builds `app/data/sample_students.csv`. Names are generated ("Student 0001").
+`python app/data/prepare_real_data.py` builds `app/data/sample_students.csv`. A hidden `person_id` links one student's two courses so both always stay on the same side of every train/test split (no leakage). Names are generated ("Student 0001").
 
 ---
 
 ## How the ML model was chosen
 
-The reviewer asked for more analysis of the model selection, so the choice is a documented experiment (`python -m app.ml.model_selection`, about 6 minutes; results in `app/ml/model_selection.json`, `docs/09_model_selection.md`, and the **Model selection** page).
+The choice is a documented experiment (`python -m app.ml.model_selection`, about 2 minutes; results in `app/ml/model_selection.json`, `docs/09_model_selection.md` and the **Model selection** page).
 
-1. **10 classifiers** (baseline, logistic, decision tree, k-NN, naive Bayes, SVM, random forest, extra trees, gradient boosting, neural network) scored with the same 5-fold cross-validation repeated 3 times.
+1. **10 classifiers** (baseline, logistic, decision tree, k-NN, naive Bayes, SVM, random forest, extra trees, gradient boosting, neural network) scored with the same 5-fold cross-validation repeated 3 times, grouped by student.
 2. **Nested cross-validation** to tune the best ones, so tuning cannot inflate the score.
 3. **Corrected resampled t-tests** (Nadeau and Bengio) to see whether differences are real, then a **parsimony rule** (simplest model within one standard error of the best).
 4. For the chosen model: threshold analysis, calibration, permutation importance and a learning curve.
 
-| Question | Selected model | Accuracy | ROC-AUC | Recall | "Always say stays" |
+| Question | Selected model | Accuracy | ROC-AUC | Failing students caught | "Always say passes" |
 |---|---|---|---|---|---|
-| Will the student withdraw? After semester 1 | Random forest | 85.5% | 0.899 | 70% | 67.9% |
-| After semester 2 | Random forest | 87.5% | 0.921 | 74% | 67.9% |
-| Semester-2 mark (regression) | Gradient boosting | RMSE 4.7 marks, R2 0.53 | | | |
+| Will the student fail? After term 1 | Gradient boosting | **89.2%** | 0.945 | 73% | 78.0% |
+| After term 2 | Logistic regression | **92.3%** | 0.974 | 79% | 78.0% |
+| Final mark (regression) | Random forest | within 5 marks: 52% / 75%; within 10: 79% / 93% (after term 1 / 2) | | | |
 
-**Honest reading.** Random forest, gradient boosting, logistic regression and the neural network are statistically tied (p > 0.05). The ceiling is set by the data, not the algorithm: the learning curve is flat and five model families agree. About 3 in 10 students who withdraw are still missed. The after-semester-2 score is partly helped by students who simply stop enrolling, so the semester-1 result is the more useful early warning. Reaching higher accuracy needs new information (attendance, assessment scores), not a fancier model. The numbers are for this Portuguese data; retrain on UTAS records before relying on them.
+**Honest reading.**
+- Accuracy is above the 85% target at both moments, and clearly above the 78% you get by always guessing "passes".
+- **The term marks do almost all the work.** Absences and course add very little once the marks are known (see the importance chart). Absences matter mainly at the extreme: 36% of records with 11+ absences failed, against 17-23% for the others.
+- After term 2, logistic regression, gradient boosting and random forest are statistically tied, so the simplest, explainable one is used.
+- About 27% of students who later fail are still missed after term 1 at the default 50% alert level; lowering it to 40% catches about 80% with similar accuracy.
+- The numbers are for this Portuguese data; retrain on UTAS records before relying on them.
 
 ---
 
@@ -74,7 +82,7 @@ python -m venv venv
 source venv/bin/activate        # Windows: .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python run.py                   # first start creates a local login:  admin / admin123
-python -m pytest tests          # optional: 18 tests
+python -m pytest tests          # optional: 21 tests
 ```
 
 Open **http://127.0.0.1:5000** and log in with `admin` / `admin123` (created only on your own computer, never on a public server). Change it on the *Password* page. Or use `run.bat` (Windows) / `bash run.sh`.
@@ -109,9 +117,9 @@ Other hosts (Railway, Fly.io, a VPS) work too: set `FLASK_ENV=production`, `SECR
 
 ```
 ├── run.py, run.sh, run.bat, config.py, render.yaml, requirements.txt
-├── tests/test_app.py             18 automated tests
+├── tests/test_app.py             21 automated tests
 ├── app/
-│   ├── grading.py                UTAS-style scale, GPA/CGPA, planner formulas (edit here)
+│   ├── grading.py                UTAS-style scale, GPA, planner formulas (edit here)
 │   ├── auth.py, security.py, audit.py   roles, login, CSRF, audit log
 │   ├── routes/                   dashboard, students, analytics, predictions, recommendations, admin
 │   ├── ml/                       preprocessing, registry (models), model_selection (study), predictor, bayes

@@ -2,24 +2,24 @@
 {% set ind = indicators %}
 <div class="row g-3">
   <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body">
-    <div class="stat-value">{{ '%.2f'|format(ind.cgpa) if ind.cgpa is not none else '-' }}<small class="text-muted fs-6"> / 4</small></div><div class="stat-label">CGPA</div></div></div></div>
+    <div class="stat-value">{{ '%.2f'|format(ind.gpa) if ind.gpa is not none else '-' }}<small class="text-muted fs-6"> / 4</small></div><div class="stat-label">GPA</div></div></div></div>
   <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body">
-    <div class="stat-value">{{ student.avg_mark }}% <small class="fs-6">{{ student.letter }}</small></div><div class="stat-label">Average mark (passed courses)</div></div></div></div>
+    <div class="stat-value">{{ ind.avg_mark }}% <small class="fs-6">{{ ind.grade.letter }}</small></div><div class="stat-label">Average mark</div></div></div></div>
   <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body">
-    <div class="stat-value fs-5">{{ student.standing }}</div><div class="stat-label">Academic standing</div></div></div></div>
+    <div class="stat-value fs-5">{{ ind.standing }}</div><div class="stat-label">Academic standing</div></div></div></div>
   <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body">
-    {% if ml %}<div class="stat-value {{ 'text-danger' if ml.level == 'High' else 'text-warning' if ml.level == 'Medium' else 'text-success' }}">{{ ml.p_dropout|round(0)|int }}%</div>
-    <div class="stat-label">Withdrawal risk - {{ ml.level }}</div>
-    <div class="risk-meter mt-2"><div class="pin" style="left: {{ [ml.p_dropout, 99]|min }}%"></div></div>
-    {% else %}<div class="stat-value">-</div><div class="stat-label">Withdrawal risk</div>{% endif %}</div></div></div>
+    {% if ml %}<div class="stat-value {{ 'text-danger' if ml.level == 'High' else 'text-warning' if ml.level == 'Medium' else 'text-success' }}">{{ ml.p_fail|round(0)|int }}%</div>
+    <div class="stat-label">Risk of failing - {{ ml.level }}</div>
+    <div class="risk-meter mt-2"><div class="pin" style="left: {{ [ml.p_fail, 99]|min }}%"></div></div>
+    {% else %}<div class="stat-value">-</div><div class="stat-label">Risk of failing</div>{% endif %}</div></div></div>
 </div>
 
 {% if ml %}
 <div class="card mt-3"><div class="card-body small">
-  <strong>How the risk was estimated.</strong> The {{ ml.model }} model ({{ ml.scenario_label|lower }} data) gives {{ ml.p_dropout }}%.
+  <strong>How the risk was estimated.</strong> The {{ ml.model }} model ({{ ml.scenario_label|lower }} data) gives {{ ml.p_fail }}%.
   {% if ml.factors.raises %}Raising the risk: {% for n, v in ml.factors.raises %}<span class="badge bg-danger-subtle text-danger">{{ n }}</span> {% endfor %}{% endif %}
   {% if ml.factors.lowers %}Lowering it: {% for n, v in ml.factors.lowers %}<span class="badge bg-success-subtle text-success">{{ n }}</span> {% endfor %}{% endif %}
-  {% if ml.projected_s2_mark is not none %}<br />Projected semester-2 mark: <strong>{{ ml.projected_s2_mark }}%</strong> ({{ ml.projection_model }}).{% endif %}
+  {% if ml.projected_final is not none %}<br />Projected final mark: <strong>{{ ml.projected_final }}%</strong> ({{ ml.projection_model }}).{% endif %}
   <br /><span class="text-muted">An early-warning estimate from past students, not a verdict. See the Model Selection page for how accurate it is.</span>
 </div></div>
 {% endif %}

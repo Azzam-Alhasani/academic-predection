@@ -1,9 +1,10 @@
 """
 Explainable calculations and suggestions for each student.
 
-Every number comes with its formula and the student's own values filled in, so the
-student (or an examiner) can check it by hand. Marks are percentages (0-100); letters,
-GPA and standing come from app/grading.py.
+Every number comes with its formula and the student's own values filled in, so the student (or an
+examiner) can check it by hand. Marks are percentages (0-100); letters, GPA and standing come from
+app/grading.py. A record is one student in one course: term 1 mark, term 2 mark (may be blank),
+absences and, once known, the final mark.
 """
 
 import math
@@ -24,69 +25,76 @@ def _num(value, default=0.0) -> float:
     return default if math.isnan(number) else number
 
 
+def _has(value) -> bool:
+    return value is not None and value == value and value != ""
+
+
 # ── Class-level reference numbers ────────────────────────────────────────────
 
 def build_class_stats(df: pd.DataFrame) -> dict:
-    """Peer statistics per programme plus dropout rates used in the advice."""
-    stats = {"programmes": {}, "overall": None, "rates": {}}
+    """Peer statistics per course plus the real fail rates quoted in the advice."""
+    stats = {"courses": {}, "overall": None, "rates": {}}
     if df.empty:
         return stats
 
-    active = df[(df.s1_approved + df.s2_approved) > 0]
-
     def pack(frame):
         marks = np.sort(frame["avg_mark"].to_numpy(dtype=float))
-        return {"n": int(len(marks)), "mean": float(marks.mean()), "std": float(marks.std()), "marks": marks}
+        absences = np.sort(frame["absences"].to_numpy(dtype=float))
+        return {"n": int(len(marks)), "mean": float(marks.mean()), "std": float(marks.std()),
+                "marks": marks, "absences": absences}
 
-    stats["overall"] = pack(active)
-    for name, group in active.groupby("programme"):
+    stats["overall"] = pack(df)
+    for name, group in df.groupby("course"):
         if len(group) >= 10:
-            stats["programmes"][name] = pack(group)
+            stats["courses"][name] = pack(group)
+
+    known = df[df["fail"].notna()]
 
     def rate(mask):
-        sub = df[mask]
-        return round(float(sub["dropout"].mean() * 100), 1) if len(sub) else None
+        sub = known[mask.loc[known.index]]
+        return round(float(sub["fail"].mean() * 100), 1) if len(sub) >= 5 else None
 
     stats["rates"] = {
-        "tuition_overdue": rate(df.tuition_paid == "no"), "tuition_paid": rate(df.tuition_paid == "yes"),
-        "scholarship": rate(df.scholarship == "yes"), "no_scholarship": rate(df.scholarship == "no"),
-        "debtor": rate(df.debtor == "yes"), "no_debt": rate(df.debtor == "no"),
-        "completion_low": rate(df.completion.fillna(1) < 0.5), "completion_high": rate(df.completion.fillna(0) >= 0.75),
-        "overall": rate(df.dropout >= 0),
+        "overall": round(float(known["fail"].mean() * 100), 1) if len(known) else None,
+        "absence_band": {b[2]: rate(df["absence_band"] == b[2]) for b in grading.ABSENCE_BANDS},
+        "t1_low": rate(df["t1_mark"] < 50), "t1_ok": rate(df["t1_mark"] >= 60),
+        "drop": rate(df["trend"] <= -5), "no_drop": rate(df["trend"] > -2),
     }
     return stats
 
 
-def _peer(student, class_stats):
-    """Percentile and z-score of the student's average mark among programme peers."""
-    group = class_stats.get("programmes", {}).get(student.get("programme")) or class_stats.get("overall")
-    if not group or group["std"] == 0:
+def _peer(student, class_stats, key="marks", value=None, mean_key="mean"):
+    group = class_stats.get("courses", {}).get(student.get("course")) or class_stats.get("overall")
+    if not group:
         return None
-    mark = _num(student.get("avg_mark"))
-    marks = group["marks"]
-    below = int(np.searchsorted(marks, mark, side="left"))
-    equal = int(np.searchsorted(marks, mark, side="right")) - below
-    percentile = (below + 0.5 * equal) / len(marks) * 100
-    z = (mark - group["mean"]) / group["std"]
-    return {"percentile": round(percentile, 1), "z": round(z, 2), "mean": round(group["mean"], 1),
-            "std": round(group["std"], 1), "n": group["n"],
-            "scope": student.get("programme") if student.get("programme") in class_stats["programmes"] else "all students"}
+    values = group[key]
+    value = _num(student.get("avg_mark")) if value is None else value
+    below = int(np.searchsorted(values, value, side="left"))
+    equal = int(np.searchsorted(values, value, side="right")) - below
+    percentile = (below + 0.5 * equal) / len(values) * 100
+    scope = student.get("course") if student.get("course") in class_stats.get("courses", {}) else "all students"
+    out = {"percentile": round(percentile, 1), "n": group["n"], "scope": scope}
+    if key == "marks":
+        std = group["std"] or 1.0
+        out.update(z=round((value - group["mean"]) / std, 2), mean=round(group["mean"], 1), std=round(std, 1))
+    return out
 
 
 # ── The calculations (each with formula + working) ───────────────────────────
 
 def calculate_student_indicators(student: dict, class_stats: dict | None = None,
-                                 target_cgpa: float | None = None, next_courses: int | None = None) -> dict:
+                                 target_average: float | None = None) -> dict:
     class_stats = class_stats or {}
-    e1, a1, m1 = _num(student.get("s1_enrolled")), _num(student.get("s1_approved")), _num(student.get("s1_mark"))
-    e2, a2, m2 = _num(student.get("s2_enrolled")), _num(student.get("s2_approved")), _num(student.get("s2_mark"))
-    enrolled, approved = e1 + e2, a1 + a2
-    has_courses = enrolled > 0
-
-    cgpa = student.get("cgpa")
-    cgpa = None if cgpa is None or (isinstance(cgpa, float) and math.isnan(cgpa)) else float(cgpa)
-    avg_mark = _num(student.get("avg_mark"))
-    g1, g2, ga = grading.grade_for(m1), grading.grade_for(m2), grading.grade_for(avg_mark)
+    m1 = _num(student.get("t1_mark"))
+    has2 = _has(student.get("t2_mark"))
+    m2 = _num(student.get("t2_mark")) if has2 else None
+    absences = int(_num(student.get("absences")))
+    marks = [m1] + ([m2] if has2 else [])
+    avg = grading.average_mark(*marks)
+    gpa = grading.gpa(*marks)
+    g1 = grading.grade_for(m1)
+    g2 = grading.grade_for(m2) if has2 else None
+    ga = grading.grade_for(avg)
 
     calc = []   # list of {key, title, value, formula, working, meaning}
 
@@ -94,109 +102,81 @@ def calculate_student_indicators(student: dict, class_stats: dict | None = None,
         calc.append({"key": key, "title": title, "value": value, "formula": formula,
                      "working": working, "meaning": meaning})
 
-    if e1 > 0:
-        gpa1 = grading.semester_gpa(m1, a1, e1)
-        add("s1", "Semester 1 result", f"{m1:.1f}% - {g1['letter']} - GPA {gpa1:.2f}",
-            "Semester GPA = GP(average mark) x courses passed / courses taken",
-            f"GP({m1:.1f}) = {g1['points']} ; {g1['points']} x {int(a1)}/{int(e1)} = {gpa1:.2f}",
-            f"{g1['description']}. A failed course counts as 0 grade points.")
-    if e2 > 0:
-        gpa2 = grading.semester_gpa(m2, a2, e2)
-        add("s2", "Semester 2 result", f"{m2:.1f}% - {g2['letter']} - GPA {gpa2:.2f}",
-            "Semester GPA = GP(average mark) x courses passed / courses taken",
-            f"GP({m2:.1f}) = {g2['points']} ; {g2['points']} x {int(a2)}/{int(e2)} = {gpa2:.2f}",
+    add("t1", "Term 1", f"{m1:.1f}% - {g1['letter']} - {g1['points']:.1f} points",
+        "Term GPA = grade points of the term mark (scale on the dashboard)",
+        f"{m1:.1f}% falls in {g1['letter']} = {g1['points']:.1f}", f"{g1['description']}.")
+    if has2:
+        add("t2", "Term 2", f"{m2:.1f}% - {g2['letter']} - {g2['points']:.1f} points",
+            "Term GPA = grade points of the term mark", f"{m2:.1f}% falls in {g2['letter']} = {g2['points']:.1f}",
             f"{g2['description']}.")
-    if has_courses and cgpa is not None:
-        add("cgpa", "Cumulative GPA (CGPA)", f"{cgpa:.2f} / 4.00",
-            "CGPA = (GP1 x passed1 + GP2 x passed2) / (taken1 + taken2)",
-            f"({g1['points']} x {int(a1)} + {g2['points']} x {int(a2)}) / ({int(e1)} + {int(e2)}) = {cgpa:.2f}",
-            f"Academic standing: {grading.standing(cgpa)} (good standing from {grading.GOOD_STANDING_CGPA}).")
-        rate = approved / enrolled
-        add("completion", "Course completion rate", f"{rate * 100:.0f}%",
-            "Completion = courses passed / courses taken",
-            f"{int(approved)} / {int(enrolled)} = {rate:.2f}",
-            f"The system treats {grading.MIN_COMPLETION_RATE * 100:.0f}% or more as healthy progress.")
+    add("gpa", "GPA", f"{gpa:.2f} / 4.00",
+        "GPA = average of the term GPAs",
+        (f"({g1['points']:.1f} + {g2['points']:.1f}) / 2 = {gpa:.2f}" if has2 else f"{g1['points']:.1f} / 1 = {gpa:.2f}"),
+        f"Academic standing: {grading.standing(gpa)} (good standing from {grading.GOOD_STANDING_GPA}).")
+    add("avg", "Average mark", f"{avg:.1f}% ({ga['letter']})",
+        "Average = (term 1 + term 2) / number of terms",
+        (f"({m1:.1f} + {m2:.1f}) / 2 = {avg:.1f}" if has2 else f"{m1:.1f} / 1 = {avg:.1f}"),
+        f"Equivalent grade: {ga['letter']} ({ga['description']}).")
 
-    both = a1 > 0 and a2 > 0
-    if both:
+    if has2:
         delta = m2 - m1
         pct = delta / m1 * 100 if m1 else 0.0
         add("trend", "Mark trend", f"{delta:+.1f} marks ({pct:+.1f}%)",
-            "Change = Mark(semester 2) - Mark(semester 1) ; % change = Change / Mark(semester 1) x 100",
+            "Change = term 2 - term 1 ; % change = Change / term 1 x 100",
             f"{m2:.1f} - {m1:.1f} = {delta:+.1f} ; {delta:+.1f} / {m1:.1f} x 100 = {pct:+.1f}%",
-            "Improving" if delta >= 2 else "Declining" if delta <= -2 else "Stable")
+            "Improving" if delta >= 2 else "Dropping" if delta <= -2 else "Stable")
 
-    if approved > 0:
-        nxt = grading.next_grade_up(avg_mark)
-        buffer = avg_mark - grading.PASS_MARK
-        add("buffer", "Safety margin above the pass mark", f"{buffer:+.1f} marks",
-            f"Margin = average mark - pass mark ({grading.PASS_MARK:.0f})",
-            f"{avg_mark:.1f} - {grading.PASS_MARK:.0f} = {buffer:+.1f}",
-            "Average of the passed courses, weighted by how many were passed each semester.")
-        if nxt:
-            add("next_grade", f"Distance to the next grade ({nxt['letter']})", f"{nxt['gap']:.1f} marks",
-                "Gap = lower bound of the next grade - current average mark",
-                f"{nxt['mark']} - {avg_mark:.1f} = {nxt['gap']:.1f}",
-                f"Your average is a {ga['letter']} ({ga['description']}).")
+    buffer = avg - grading.PASS_MARK
+    add("buffer", "Safety margin above the pass mark", f"{buffer:+.1f} marks",
+        f"Margin = average mark - pass mark ({grading.PASS_MARK:.0f})", f"{avg:.1f} - {grading.PASS_MARK:.0f} = {buffer:+.1f}",
+        "Negative means you are currently below the pass mark." if buffer < 0 else "Positive means you are above the pass mark.")
+    nxt = grading.next_grade_up(avg)
+    if nxt:
+        add("next_grade", f"Distance to the next grade ({nxt['letter']})", f"{nxt['gap']:.1f} marks",
+            "Gap = lower bound of the next grade - average mark", f"{nxt['mark']} - {avg:.1f} = {nxt['gap']:.1f}",
+            f"Your average is a {ga['letter']}.")
 
-        peer = _peer({**student, "avg_mark": avg_mark}, class_stats)
-        if peer:
-            add("peer", "Position among your peers", f"Better than {peer['percentile']:.0f}% (z = {peer['z']:+.2f})",
-                "Percentile = (students below + 0.5 x equal) / N x 100 ; z = (mark - mean) / std dev",
-                f"Group: {peer['scope']} (N={peer['n']}), mean {peer['mean']}, std dev {peer['std']} ; "
-                f"z = ({avg_mark:.1f} - {peer['mean']}) / {peer['std']} = {peer['z']:+.2f}",
-                "z above 0 means above the group average.")
+    peer = _peer(student, class_stats, "marks", avg)
+    if peer:
+        add("peer", "Position among your peers", f"Better than {peer['percentile']:.0f}% (z = {peer['z']:+.2f})",
+            "Percentile = (students below + 0.5 x equal) / N x 100 ; z = (mark - mean) / std dev",
+            f"Group: {peer['scope']} (N={peer['n']}), mean {peer['mean']}, std dev {peer['std']} ; "
+            f"z = ({avg:.1f} - {peer['mean']}) / {peer['std']} = {peer['z']:+.2f}", "z above 0 means above the group average.")
 
-    # ---- planning: what is needed next semester --------------------------------
+    band = grading.absence_band(absences)
+    band_rate = class_stats.get("rates", {}).get("absence_band", {}).get(band)
+    att = _peer(student, class_stats, "absences", absences)
+    add("absences", "Absences", f"{absences} ({band})",
+        "Compared with peers: percentile of absences (lower is better)",
+        (f"{absences} absences ; fewer absences than {100 - att['percentile']:.0f}% of {att['scope']}" if att else f"{absences} absences")
+        + (f" ; {band_rate}% of students in this band failed the course" if band_rate is not None else ""),
+        "Every absence is a missed lesson. The link with failing is weak below 11 absences and clearer above it.")
+
+    # ---- planning: what the final mark has to be -------------------------------
     plan = None
-    if has_courses and cgpa is not None:
-        typical = max(1, int(round(enrolled / (2 if e2 > 0 and e1 > 0 else 1))))
-        n = int(next_courses) if next_courses else min(typical, 8)
-        n = max(1, min(n, 12))
-        to_pass, feasible = grading.courses_to_pass(enrolled, approved, n)
-        add("to_pass", f"Courses to pass next semester ({n} planned)", f"{to_pass} of {n}",
-            "k = ceil(0.75 x (taken + n) - passed)",
-            f"ceil(0.75 x ({int(enrolled)} + {n}) - {int(approved)}) = {to_pass}",
-            "Passing at least this many brings your completion rate to 75%."
-            if feasible else "Even passing every course will not reach 75% in one semester; plan two semesters.")
-
-        default_target = min(grading.MAX_POINTS, round((math.floor(cgpa * 2) + 1) / 2, 1))
-        target = float(target_cgpa) if target_cgpa is not None else default_target
-        target = max(0.0, min(grading.MAX_POINTS, target))
-        needed, reachable = grading.required_semester_gpa(cgpa, enrolled, target, n)
-        mark_needed = grading.mark_for_points(needed) if reachable else None
-        working = (f"({target:.2f} x ({int(enrolled)} + {n}) - {cgpa:.2f} x {int(enrolled)}) / {n} = {needed:.2f}")
+    default_target = float(nxt["mark"]) if nxt and avg >= grading.PASS_MARK else float(grading.PASS_MARK) if avg < grading.PASS_MARK else 100.0
+    if has2:
+        target = default_target if target_average is None else max(0.0, min(100.0, float(target_average)))
+        needed, reachable = grading.required_final_mark(m1, m2, target)
         if needed <= 0:
-            meaning = "You already meet this target; keep passing your courses to hold it."
+            meaning = "You already meet this target; keep your marks up."
         elif not reachable:
-            meaning = "Not reachable in one semester (it would need more than 4.00). Choose a lower target or plan two semesters."
+            meaning = "Not reachable with one more mark (it would need more than 100). Choose a lower target."
         else:
-            meaning = (f"Pass all {n} courses with an average of about {mark_needed:.0f}% "
-                       f"({grading.letter_for(mark_needed)} or better).")
-        add("planner", f"Goal planner: CGPA {target:.2f}", f"Semester GPA of {needed:.2f} needed",
-            "Needed GPA = (target x (taken + n) - CGPA x taken) / n",
-            working, meaning)
-        plan = {"target": target, "courses": n, "needed_gpa": needed, "reachable": reachable,
-                "mark_needed": mark_needed, "default_target": default_target}
+            meaning = (f"Score about {needed:.0f}% in the final mark ({grading.letter_for(needed)} or better), "
+                       "assuming all three marks count equally.")
+        add("planner", f"Goal planner: average {target:.0f}%", f"Final mark of {needed:.1f}% needed",
+            "Needed = 3 x target - term 1 - term 2", f"3 x {target:.0f} - {m1:.1f} - {m2:.1f} = {needed:.1f}", meaning)
+        plan = {"target": target, "needed_mark": needed, "reachable": reachable, "default_target": default_target}
 
-        if both:
-            projected = max(0.0, min(100.0, m2 + (m2 - m1)))
-            proj_gpa = grading.points_for(projected)
-            proj_cgpa = round((cgpa * enrolled + proj_gpa * n) / (enrolled + n), 2)
-            add("projection", "If your trend continues", f"Next mark about {projected:.0f}% - CGPA {proj_cgpa:.2f}",
-                "Next mark = Mark2 + (Mark2 - Mark1) ; new CGPA = (CGPA x taken + GP(next) x n) / (taken + n), all n courses passed",
-                f"{m2:.1f} + ({m2:.1f} - {m1:.1f}) = {projected:.1f} ; "
-                f"({cgpa:.2f} x {int(enrolled)} + {proj_gpa} x {n}) / ({int(enrolled)} + {n}) = {proj_cgpa:.2f}",
-                "A simple straight-line projection, not a prediction: use it as a warning or a target.")
+        projected = max(0.0, min(100.0, m2 + (m2 - m1)))
+        proj_avg = round((m1 + m2 + projected) / 3, 1)
+        add("projection", "If your trend continues", f"Final mark about {projected:.0f}% - average {proj_avg}%",
+            "Next mark = term 2 + (term 2 - term 1) ; average = (term 1 + term 2 + next) / 3",
+            f"{m2:.1f} + ({m2:.1f} - {m1:.1f}) = {projected:.1f} ; ({m1:.1f} + {m2:.1f} + {projected:.1f}) / 3 = {proj_avg}",
+            "A straight-line projection, not a prediction: use it as a warning or a target.")
 
-        per_sem = approved / (2 if e1 > 0 and e2 > 0 else 1)
-        load = max(3, min(typical, math.ceil(per_sem + 1)))
-        add("load", "Suggested course load", f"{load} courses",
-            "Load = min(usual load, ceil(courses passed per semester + 1))",
-            f"min({typical}, ceil({per_sem:.1f} + 1)) = {load}",
-            "Taking slightly more than you usually pass is a stretch; far more risks failing several courses.")
-
-    return {"calculations": calc, "plan": plan, "grade": ga, "cgpa": cgpa, "has_courses": has_courses,
+    return {"calculations": calc, "plan": plan, "grade": ga, "gpa": gpa, "standing": grading.standing(gpa), "avg_mark": avg, "has_term2": has2,
             "scale": grading.scale_table()}
 
 
@@ -214,107 +194,95 @@ def recommend_student(student: dict, class_stats: dict | None = None, indicators
     def add(priority, title, text, why):
         out.append({"priority": priority, "title": title, "text": text, "why": why})
 
-    e1, a1, m1 = _num(student.get("s1_enrolled")), _num(student.get("s1_approved")), _num(student.get("s1_mark"))
-    e2, a2, m2 = _num(student.get("s2_enrolled")), _num(student.get("s2_approved")), _num(student.get("s2_mark"))
-    enrolled, approved = e1 + e2, a1 + a2
+    m1 = _num(student.get("t1_mark"))
+    has2 = ind["has_term2"]
+    m2 = _num(student.get("t2_mark")) if has2 else None
+    avg, gpa = ind["avg_mark"], ind["gpa"]
+    absences = int(_num(student.get("absences")))
 
-    if not ind["has_courses"]:
-        add("medium", "No courses recorded yet",
-            "There are no enrolled courses on record, so no GPA can be calculated. Register for courses and "
-            "meet your academic advisor to plan your first semester.", "Courses taken = 0")
-        return out
+    if avg < grading.PASS_MARK:
+        add("high", "Your average is below the pass mark",
+            f"Your average is {avg:.1f}% (pass mark {grading.PASS_MARK:.0f}%). Meet your teacher this week, list the topics "
+            "you lost marks on, and set a fixed revision slot for them. "
+            + (f"In the data, {rates['t1_low']}% of students under 50% in term 1 failed, against {rates['t1_ok']}% of those with 60% or more."
+               if rates.get("t1_low") is not None and rates.get("t1_ok") is not None else ""),
+            calc["buffer"]["working"])
+    elif avg < grading.PASS_MARK + 10:
+        add("medium", "You are close to the pass mark",
+            f"Your margin is only {avg - grading.PASS_MARK:.1f} marks. A weak final could pull you under, so protect the margin: "
+            "revise your lowest-scoring topics first.", calc["buffer"]["working"])
 
-    cgpa = ind["cgpa"]
-    rate = approved / enrolled
-    if rate < 0.5:
-        add("high", "You passed fewer than half of your courses",
-            f"You passed {int(approved)} of {int(enrolled)} courses ({rate * 100:.0f}%). Talk to your advisor this week "
-            f"and consider a lighter load next semester ({calc['load']['value'] if 'load' in calc else 'fewer courses'}). "
-            + (f"In the data, {rates['completion_low']}% of students in this situation withdrew, against "
-               f"{rates['completion_high']}% of those who passed 75% or more." if rates.get("completion_low") is not None else ""),
-            f"Completion = {int(approved)}/{int(enrolled)} = {rate:.2f} (below 0.50)")
-    elif rate < grading.MIN_COMPLETION_RATE and "to_pass" in calc:
-        add("medium", "Raise your course completion rate",
-            f"Your completion rate is {rate * 100:.0f}%. Pass {calc['to_pass']['value']} next semester to reach "
-            f"{grading.MIN_COMPLETION_RATE * 100:.0f}%. Start with the courses you retook or missed.",
-            calc["to_pass"]["working"])
-
-    if cgpa is not None and cgpa < grading.WARNING_CGPA:
-        add("high", "Your CGPA is in the probation range",
-            f"CGPA {cgpa:.2f} is below {grading.WARNING_CGPA}. Book an academic-advising meeting and agree a recovery "
-            "plan before registering for next semester.", calc["cgpa"]["working"])
-    elif cgpa is not None and cgpa < grading.GOOD_STANDING_CGPA:
-        add("medium", "Your CGPA is in the warning range",
-            f"CGPA {cgpa:.2f} is below the good-standing line ({grading.GOOD_STANDING_CGPA}). Use the goal planner "
-            "below to see what you need next semester.", calc["cgpa"]["working"])
-
-    if "trend" in calc:
+    if has2:
         delta = m2 - m1
         if delta <= -5:
-            add("high", "Your marks are dropping", f"Your average fell {abs(delta):.1f} marks from semester 1 to 2. "
-                "Find out what changed (workload, attendance, a specific subject) and ask for help early.",
+            add("high", "Your marks are dropping",
+                f"Your mark fell {abs(delta):.1f} points from term 1 to term 2. Find out what changed (topic, workload, attendance) and ask for help early. "
+                + (f"In the data, {rates['drop']}% of students whose mark fell 5 or more points failed, against {rates['no_drop']}% of the rest."
+                   if rates.get("drop") is not None and rates.get("no_drop") is not None else ""),
                 calc["trend"]["working"])
         elif delta <= -2:
-            add("medium", "Your marks are slipping", f"Down {abs(delta):.1f} marks. Review your weakest courses and "
-                "set a weekly revision slot.", calc["trend"]["working"])
-        elif delta >= 2:
-            add("good", "Your marks are improving", f"Up {delta:.1f} marks. Keep the routine that is working.",
+            add("medium", "Your marks are slipping", f"Down {abs(delta):.1f} points. Review the topics from the last term and set a weekly revision slot.",
                 calc["trend"]["working"])
+        elif delta >= 2:
+            add("good", "Your marks are improving", f"Up {delta:.1f} points. Keep the routine that is working.", calc["trend"]["working"])
+
+    band = grading.absence_band(absences)
+    band_rate = rates.get("absence_band", {}).get(band)
+    if absences >= 11:
+        add("high", "Your absences are high",
+            f"You have missed {absences} classes. Plan to attend every lesson from now on and get the notes for the ones you missed. "
+            + (f"In the data, {band_rate}% of students with 11 or more absences failed, against {rates.get('overall')}% overall." if band_rate is not None else ""),
+            calc["absences"]["working"])
+    elif absences >= 6:
+        add("medium", "Watch your attendance",
+            f"{absences} absences so far. Keep it from growing: arrange catch-up for the lessons you missed.", calc["absences"]["working"])
+    elif absences == 0 and avg < grading.PASS_MARK:
+        add("low", "Attendance is not the issue",
+            "You attend every lesson but your marks are low, so the problem is how you study, not whether you come. Ask your teacher for feedback on your answers.",
+            calc["absences"]["working"])
 
     if "next_grade" in calc:
-        gap = grading.next_grade_up(_num(student.get("avg_mark")))
-        if gap and gap["gap"] <= 3:
-            add("low", f"You are close to a {gap['letter']}", f"Only {gap['gap']:.1f} marks short. Small gains in "
-                "coursework and the final exam can move you up a band.", calc["next_grade"]["working"])
+        gap = grading.next_grade_up(avg)
+        if gap and gap["gap"] <= 3 and avg >= grading.PASS_MARK:
+            add("low", f"You are close to a {gap['letter']}", f"Only {gap['gap']:.1f} marks short. Small gains in the final can move you up a band.",
+                calc["next_grade"]["working"])
 
     if "peer" in calc:
         pct = float(calc["peer"]["value"].split("than ")[1].split("%")[0])
         if pct < 25:
             add("medium", "You are in the lower quarter of your group",
-                "Join tutoring or a study group for your programme, and compare your notes with a student who scores higher.",
+                "Join a study group or tutoring for this course, and compare notes with a student who scores higher.",
                 calc["peer"]["working"])
 
-    if student.get("tuition_paid") == "no":
-        add("high", "Tuition fees are overdue",
-            "Contact the finance office about a payment plan now. "
-            + (f"In the data, {rates['tuition_overdue']}% of students with overdue fees withdrew, against "
-               f"{rates['tuition_paid']}% with fees paid." if rates.get("tuition_overdue") is not None else ""),
-            "tuition_paid = no")
-    if student.get("debtor") == "yes":
-        add("medium", "You have an outstanding debt", "Check what is owed and ask about instalments before it blocks registration.",
-            "debtor = yes")
-    if student.get("scholarship") != "yes" and (cgpa or 0) >= grading.GOOD_STANDING_CGPA:
-        add("low", "Look into scholarships", "Your results are in good standing, so you may qualify for financial support. "
-            "Ask the student affairs office which scholarships are open.", "scholarship = no, standing good")
-
-    if ml and ml.get("p_dropout") is not None:
-        p = ml["p_dropout"]
+    if ml and ml.get("p_fail") is not None:
+        p = ml["p_fail"]
         if p >= 50:
-            add("high", "The model flags a high withdrawal risk", f"Estimated risk {p:.0f}%. Please meet an advisor; "
-                "this is an alert to act on, not a verdict.", f"Model probability = {p:.1f}% (>= 50%)")
-        elif p >= 20:
-            add("medium", "The model sees a moderate withdrawal risk", f"Estimated risk {p:.0f}%. Check the factors below "
-                "and tackle the biggest one first.", f"Model probability = {p:.1f}% (20-50%)")
+            add("high", "The model flags a high risk of failing", f"Estimated risk {p:.0f}%. Please act on the points above; "
+                "this is an alert, not a verdict.", f"Model probability = {p:.1f}% (>= 50%)")
+        elif p >= 25:
+            add("medium", "The model sees a moderate risk of failing", f"Estimated risk {p:.0f}%. Tackle the biggest factor below first.",
+                f"Model probability = {p:.1f}% (25-50%)")
+        if ml.get("projected_final") is not None:
+            add("low", "Projected final mark", f"The model projects a final mark of about {ml['projected_final']:.1f}% "
+                f"({grading.letter_for(ml['projected_final'])}). It is a guide, typically within 5-10 marks.",
+                f"{ml.get('projection_model')}: {ml['projected_final']:.1f}%")
 
-    if "planner" in calc and ind["plan"]:
-        plan = ind["plan"]
-        add("low", "Your goal for next semester", f"{calc['planner']['title']}: {calc['planner']['meaning']}",
-            calc["planner"]["working"])
+    if "planner" in calc:
+        add("low", "Your goal for the final", f"{calc['planner']['title']}: {calc['planner']['meaning']}", calc["planner"]["working"])
 
-    if not out:
-        add("good", "You are on track", "No warning signs in your record. Keep passing your courses and checking your marks.",
-            "All indicators within normal range")
+    if not any(s["priority"] in ("high", "medium") for s in out):
+        add("good", "You are on track", "No warning signs in your record. Keep attending and revising.", "All indicators within normal range")
     out.sort(key=lambda s: PRIORITY_ORDER[s["priority"]])
     return out
 
 
 def report_text(student: dict, indicators: dict, suggestions: list, ml: dict | None = None) -> str:
     """Plain-text version of the report (for copy / email)."""
-    lines = [f"Academic progress report - {student.get('name')} ({student.get('programme')})", ""]
+    lines = [f"Academic progress report - {student.get('name')} ({student.get('course')})", ""]
     for c in indicators["calculations"]:
         lines += [f"{c['title']}: {c['value']}", f"  Formula: {c['formula']}", f"  Working: {c['working']}", ""]
-    if ml and ml.get("p_dropout") is not None:
-        lines += [f"Estimated withdrawal risk: {ml['p_dropout']:.0f}% ({ml.get('level')})", ""]
+    if ml and ml.get("p_fail") is not None:
+        lines += [f"Estimated risk of failing: {ml['p_fail']:.0f}% ({ml.get('level')})", ""]
     lines.append("Suggestions")
     for i, s in enumerate(suggestions, 1):
         lines.append(f"{i}. [{s['priority'].upper()}] {s['title']}: {s['text']}")

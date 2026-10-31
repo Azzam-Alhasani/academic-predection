@@ -24,13 +24,8 @@ MIN_STUDENTS = 100
 SELECTION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model_selection.json")
 
 FEATURE_LABELS = {
-    "age": "Age at enrolment", "admission_mark": "Admission mark", "prev_mark": "Previous qualification mark",
-    "s1_enrolled": "Courses taken in semester 1", "s1_approved": "Courses passed in semester 1",
-    "s1_mark": "Semester 1 mark", "s1_completion": "Semester 1 completion rate",
-    "s2_enrolled": "Courses taken in semester 2", "s2_approved": "Courses passed in semester 2",
-    "s2_mark": "Semester 2 mark", "s2_completion": "Semester 2 completion rate",
-    "gender": "Gender", "programme": "Programme", "attendance": "Daytime / evening",
-    "scholarship": "Scholarship", "tuition_paid": "Tuition fees", "debtor": "Debt",
+    "t1_mark": "Term 1 mark", "t2_mark": "Term 2 mark", "trend": "Change from term 1 to term 2",
+    "absences": "Absences", "course": "Course",
 }
 
 _model_cache = None
@@ -67,12 +62,12 @@ def _get_models():
         if _model_cache is not None:
             return _model_cache
         df = load_students()
-        if df.empty or len(df) < MIN_STUDENTS or df["dropout"].nunique() < 2:
+        if df.empty or df["fail"].notna().sum() < MIN_STUDENTS or df["fail"].nunique() < 2:
             return None
         study = load_selection()
-        models = {"classifier": {}, "explainer": {}, "regressor": None, "n": int(len(df))}
+        models = {"classifier": {}, "explainer": {}, "regressor": {}, "n": int(df["fail"].notna().sum())}
         for scenario in SCENARIOS:
-            X, y = prepare_classification(df, scenario)
+            X, y, _ = prepare_classification(df, scenario)
             block = study.get("classification", {}).get(scenario)
             key = block["selected"] if block else "logistic"
             params = _params(block) if block else {}
@@ -81,13 +76,12 @@ def _get_models():
                 "pipeline": _pipeline(scenario, CLASSIFIERS, key, params).fit(X, y),
             }
             models["explainer"][scenario] = _pipeline(scenario, CLASSIFIERS, "logistic").fit(X, y)
-        reg_block = study.get("regression")
-        key = reg_block["selected"] if reg_block else "ridge"
-        Xr, yr = prepare_regression(df)
-        if len(yr) >= MIN_STUDENTS:
-            models["regressor"] = {
-                "key": key, "label": REGRESSORS[key][0],
-                "pipeline": _pipeline("after_sem1", REGRESSORS, key, _params(reg_block) if reg_block else {}).fit(Xr, yr),
+            reg_block = study.get("regression", {}).get(scenario)
+            rkey = reg_block["selected"] if reg_block else "ridge"
+            Xr, yr, _ = prepare_regression(df, scenario)
+            models["regressor"][scenario] = {
+                "key": rkey, "label": REGRESSORS[rkey][0],
+                "pipeline": _pipeline(scenario, REGRESSORS, rkey, _params(reg_block) if reg_block else {}).fit(Xr, yr),
             }
         _model_cache = models
         return _model_cache
@@ -105,8 +99,8 @@ def get_training_size() -> int:
     return models["n"] if models else 0
 
 
-def risk_level(p_dropout: float) -> str:
-    return "High" if p_dropout >= 50 else "Medium" if p_dropout >= 20 else "Low"
+def risk_level(p_fail: float) -> str:
+    return "High" if p_fail >= 50 else "Medium" if p_fail >= 25 else "Low"
 
 
 def _factors(explainer, X, scenario, top=3) -> dict:
@@ -127,29 +121,26 @@ def _factors(explainer, X, scenario, top=3) -> dict:
 
 
 def predict_student(record: dict) -> dict:
-    """Withdrawal risk (and projected semester-2 mark when possible) for one student record."""
+    """Probability of failing the course (and the projected final mark) for one record."""
     models = _get_models()
     if models is None:
-        return {"error": f"Not enough data to train the models (need at least {MIN_STUDENTS} students)."}
+        return {"error": f"Not enough data to train the models (need at least {MIN_STUDENTS} records)."}
 
-    has_s2 = float(record.get("s2_enrolled") or 0) > 0
-    scenario = "after_sem2" if has_s2 else "after_sem1"
+    t2 = record.get("t2_mark")
+    has_t2 = t2 is not None and t2 == t2 and t2 != ""
+    scenario = "after_term2" if has_t2 else "after_term1"
     X = record_to_frame(record, scenario)
     pipe = models["classifier"][scenario]["pipeline"]
     if hasattr(pipe, "predict_proba"):
         p = float(pipe.predict_proba(X)[0][1])
     else:
         p = float(1 / (1 + np.exp(-pipe.decision_function(X)[0])))
-    result = {
+    reg = models["regressor"][scenario]
+    mark = float(reg["pipeline"].predict(X)[0])
+    return {
         "scenario": scenario, "scenario_label": SCENARIOS[scenario]["label"],
         "model": models["classifier"][scenario]["label"],
-        "p_dropout": round(p * 100, 1), "level": risk_level(p * 100),
+        "p_fail": round(p * 100, 1), "level": risk_level(p * 100),
         "factors": _factors(models["explainer"][scenario], X, scenario),
-        "projected_s2_mark": None,
+        "projected_final": round(min(100.0, max(0.0, mark)), 1), "projection_model": reg["label"],
     }
-    reg = models["regressor"]
-    if reg and not has_s2 and float(record.get("s1_approved") or 0) > 0:
-        mark = float(reg["pipeline"].predict(record_to_frame(record, "after_sem1"))[0])
-        result["projected_s2_mark"] = round(min(100.0, max(0.0, mark)), 1)
-        result["projection_model"] = reg["label"]
-    return result

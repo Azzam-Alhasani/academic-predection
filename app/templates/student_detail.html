@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
-  <div><span class="text-muted">{{ student.programme }} · {{ student.gender }} · age {{ student.age }} · {{ student.attendance }}</span>
-    <span class="badge bg-secondary ms-2">{{ student.outcome }}</span></div>
+  <div><span class="text-muted">{{ student.course }} · {{ student.absences }} absences</span>
+    <span class="badge {{ 'bg-success' if student.result == 'Pass' else 'bg-danger' if student.result == 'Fail' else 'bg-secondary' }} ms-2">{{ student.result }}{% if student.final_mark == student.final_mark %} ({{ student.final_mark }}%){% endif %}</span></div>
   <div class="d-flex gap-2 no-print">
     <a class="btn btn-sm btn-outline-primary" href="{{ url_for('students.student_report', student_id=student.student_id, **request.args) }}"><i class="fa-solid fa-print me-1"></i>Printable report</a>
     {% if is_staff %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('students.student_list') }}">Back to list</a>{% endif %}
@@ -17,13 +17,11 @@
 {% if indicators.plan %}
 <div class="card mt-4 no-print"><div class="card-header">Goal planner</div><div class="card-body">
   <form method="GET" class="row g-2 align-items-end">
-    <div class="col-6 col-md-3"><label class="form-label small">Target CGPA</label>
-      <input type="number" name="target" step="0.05" min="0" max="4" class="form-control form-control-sm" value="{{ '%.2f'|format(indicators.plan.target) }}" /></div>
-    <div class="col-6 col-md-3"><label class="form-label small">Courses next semester</label>
-      <input type="number" name="courses" min="1" max="12" class="form-control form-control-sm" value="{{ indicators.plan.courses }}" /></div>
+    <div class="col-6 col-md-3"><label class="form-label small">Target average mark (%)</label>
+      <input type="number" name="target" step="1" min="0" max="100" class="form-control form-control-sm" value="{{ '%.0f'|format(indicators.plan.target) }}" /></div>
     <div class="col-md-3"><button class="btn btn-sm btn-primary">Recalculate</button></div>
   </form>
-  <p class="small text-muted mt-2 mb-0">Change the target to see the GPA and marks you would need. The working appears in "Calculations" above.</p>
+  <p class="small text-muted mt-2 mb-0">Change the target average to see the final mark you would need. The working appears in "Calculations" above.</p>
 </div></div>
 {% endif %}
 
@@ -35,7 +33,7 @@
 <div class="card mt-4 no-print"><div class="card-header">Edit record</div><div class="card-body">
   <form method="POST" action="{{ url_for('students.student_edit', student_id=student.student_id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-    {% set f = student %}{% set with_name = true %}{% set with_outcome = true %}
+    {% set f = student %}{% set with_name = true %}{% set with_final = true %}
     {% include "_student_fields.html" %}
     <button class="btn btn-primary mt-3">Save changes</button>
   </form>

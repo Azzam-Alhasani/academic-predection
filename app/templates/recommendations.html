@@ -4,11 +4,11 @@
 
 {% block content %}
 <div class="row g-4 mt-1">
-  <div class="col-12"><div class="card"><div class="card-header">Bayes' Theorem on the real records</div><div class="card-body">
+  <div class="col-12"><div class="card"><div class="card-header">Bayes' Theorem on the real records (chance of failing the course)</div><div class="card-body">
     {% if bayes.prior is none %}<p class="text-muted">No data.</p>{% else %}
-    <p class="mb-2"><code>P(Dropout | Evidence) = P(Evidence | Dropout) × P(Dropout) / P(Evidence)</code> &nbsp;·&nbsp; prior <strong>P(Dropout) = {{ bayes.prior }}</strong></p>
+    <p class="mb-2"><code>P(Fail | Evidence) = P(Evidence | Fail) × P(Fail) / P(Evidence)</code> &nbsp;·&nbsp; prior <strong>P(Fail) = {{ bayes.prior }}</strong></p>
     <div class="table-responsive"><table class="table table-sm">
-      <thead><tr><th>Evidence type</th><th>Evidence</th><th>Students</th><th>P(E | Dropout)</th><th>P(E)</th><th>P(Dropout | E)</th></tr></thead><tbody>
+      <thead><tr><th>Evidence type</th><th>Evidence</th><th>Students</th><th>P(E | Fail)</th><th>P(E)</th><th>P(Fail | E)</th></tr></thead><tbody>
       {% for r in bayes.by_evidence %}<tr><td>{{ r.evidence_type }}</td><td>{{ r.evidence }}</td><td>{{ r.students }}</td><td>{{ r.p_e_given_dropout }}</td><td>{{ r.p_evidence }}</td>
         <td class="fw-semibold {{ 'text-danger' if r.p_dropout_given_e > bayes.prior * 1.5 else 'text-success' if r.p_dropout_given_e < bayes.prior * 0.6 }}">{{ r.p_dropout_given_e }}</td></tr>{% endfor %}
       </tbody></table></div>
@@ -23,9 +23,9 @@
     <div class="card-header d-flex justify-content-between align-items-center"><span>Top suggestions per student ({{ total }} {{ 'at-risk ' if only_risk }}students)</span>
       <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('recommendations.recommendations', risk=(0 if only_risk else 1)) }}">{{ 'Show everyone' if only_risk else 'Show only at-risk' }}</a></div>
     <div class="table-responsive"><table class="table table-sm align-middle mb-0">
-      <thead><tr><th>Student</th><th>CGPA</th><th>Standing</th><th>Main suggestions</th><th></th></tr></thead><tbody>
-      {% for r in rows %}<tr><td>{{ r.student.name }}<div class="small text-muted">{{ r.student.programme }}</div></td>
-        <td>{{ '%.2f'|format(r.student.cgpa) if r.student.cgpa is not none else '-' }}</td><td class="small">{{ r.student.standing }}</td>
+      <thead><tr><th>Student</th><th>GPA</th><th>Standing</th><th>Main suggestions</th><th></th></tr></thead><tbody>
+      {% for r in rows %}<tr><td>{{ r.student.name }}<div class="small text-muted">{{ r.student.course }}</div></td>
+        <td>{{ '%.2f'|format(r.student.gpa) }}</td><td class="small">{{ r.student.standing }}</td>
         <td class="small">{% for s in r.top %}<div><span class="badge {{ {'high': 'bg-danger', 'medium': 'bg-warning text-dark', 'low': 'bg-info text-dark', 'good': 'bg-success'}[s.priority] }}">{{ s.priority }}</span> {{ s.title }}</div>{% endfor %}</td>
         <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('students.student_detail', student_id=r.student.student_id) }}">Report</a></td></tr>
       {% else %}<tr><td colspan="5" class="text-center text-muted py-4">Nothing to show.</td></tr>{% endfor %}

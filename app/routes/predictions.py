@@ -17,13 +17,7 @@ from app.routes.students import CHOICE_FIELDS, NUMBER_FIELDS, parse_student_form
 
 predictions_bp = Blueprint("predictions", __name__, url_prefix="/predictions")
 
-DEFAULTS = {
-    "gender": "Female", "programme": "Informatics Engineering", "attendance": "Daytime",
-    "scholarship": "no", "tuition_paid": "yes", "debtor": "no", "age": 19,
-    "admission_mark": 63, "prev_mark": 62,
-    "s1_enrolled": 6, "s1_approved": 5, "s1_mark": 62,
-    "s2_enrolled": 0, "s2_approved": 0, "s2_mark": 0,
-}
+DEFAULTS = {"course": "Mathematics", "t1_mark": 55, "t2_mark": "", "absences": 3}
 
 
 @predictions_bp.route("/", methods=["GET", "POST"])
@@ -36,9 +30,9 @@ def predictions():
     if request.method == "POST":
         submitted = request.form.to_dict()
         form_data.update({k: submitted.get(k, form_data.get(k)) for k in DEFAULTS})
-        data, error = parse_student_form({**submitted, "outcome": "Enrolled", "name": ""})
+        data, error = parse_student_form({**submitted, "final_mark": "", "name": ""})
         if not error:
-            record = _compute_derived_columns(pd.DataFrame([{**data, "outcome": "Enrolled"}])).iloc[0].to_dict()
+            record = _compute_derived_columns(pd.DataFrame([{**data, "person_id": 0}])).iloc[0].to_dict()
             record = {k: (None if isinstance(v, float) and v != v else v) for k, v in record.items()}
             result = predict_student(record)
             if "error" in result:
@@ -54,7 +48,7 @@ def predictions():
     return render_template(
         "predictions.html", study=study, scenarios=SCENARIOS, clf=clf, reg=study.get("regression"),
         form=form_data, result=result, report=report, error=error, choices=CHOICE_FIELDS,
-        number_fields=NUMBER_FIELDS, training_size=get_training_size(),
+        training_size=get_training_size(),
     )
 
 

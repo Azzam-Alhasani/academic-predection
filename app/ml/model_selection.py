@@ -39,10 +39,7 @@ from sklearn.metrics import (
     accuracy_score, average_precision_score, balanced_accuracy_score, brier_score_loss, f1_score,
     mean_absolute_error, mean_squared_error, precision_score, r2_score, recall_score, roc_auc_score,
 )
-from sklearn.model_selection import (
-    KFold, RandomizedSearchCV, RepeatedKFold, RepeatedStratifiedKFold, StratifiedKFold,
-    cross_val_predict, learning_curve, train_test_split,
-)
+from sklearn.model_selection import RandomizedSearchCV, StratifiedGroupKFold, cross_val_predict, learning_curve
 from sklearn.pipeline import make_pipeline
 
 from app.ml.preprocessing import (
@@ -59,6 +56,37 @@ N_SPLITS, N_REPEATS_A, N_REPEATS_B = (3, 1, 1) if QUICK else (5, 3, 2)
 INNER_FOLDS, INNER_ITER = (2, 2) if QUICK else (3, 5)
 TEST_TRAIN_RATIO = 1 / (N_SPLITS - 1)          # test share / train share for Nadeau-Bengio
 N_JOBS = 2
+
+
+class GroupStratified:
+    """Shuffled K-fold that keeps a student's courses together and balances pass/fail.
+
+    Works for a 0/1 target and for the final mark (stratified on final mark below 50)."""
+
+    def __init__(self, n_splits, seed=SEED):
+        self.n_splits, self.seed = n_splits, seed
+
+    def get_n_splits(self, X=None, y=None, groups=None):
+        return self.n_splits
+
+    def split(self, X, y, groups=None):
+        y = np.asarray(y)
+        strata = y if set(np.unique(y)) <= {0, 1} else (y < 50).astype(int)
+        return StratifiedGroupKFold(self.n_splits, shuffle=True, random_state=self.seed).split(X, strata, groups)
+
+
+def grouped_splits(y, groups, n_splits, n_repeats, seed):
+    """Repeated stratified K-fold in which all courses of one student stay on the same side.
+
+    The same student appears in two courses for most records; a plain K-fold would let the model
+    see a student's Mathematics record while being tested on their Portuguese record. For the
+    regression task the split is stratified on pass/fail (final mark below 50) instead of the mark."""
+    strata = y if set(np.unique(y)) <= {0, 1} else (np.asarray(y) < 50).astype(int)
+    out = []
+    for r in range(n_repeats):
+        cv = StratifiedGroupKFold(n_splits, shuffle=True, random_state=seed + r)
+        out.extend(cv.split(np.zeros(len(strata)), strata, groups))
+    return out
 
 
 def log(*args):
@@ -131,16 +159,15 @@ def _fit_score_reg(pipe, X, y, train, test):
     return regression_metrics(y[test], model.predict(X.iloc[test]))
 
 
-def _nested_fold(pipe, grid, X, y, train, test, scenario, task):
+def _nested_fold(pipe, grid, X, y, groups, train, test, scenario, task):
     """One outer fold of nested CV: tune on `train` only, then score on `test`."""
     scoring = "roc_auc" if task == "clf" else "neg_root_mean_squared_error"
-    inner = StratifiedKFold(INNER_FOLDS, shuffle=True, random_state=SEED) if task == "clf" else \
-        KFold(INNER_FOLDS, shuffle=True, random_state=SEED)
+    inner = GroupStratified(INNER_FOLDS)
     search = RandomizedSearchCV(
         pipe, {f"{pipe.steps[-1][0]}__{k}": v for k, v in grid.items()}, n_iter=INNER_ITER,
         scoring=scoring, cv=inner, random_state=SEED, n_jobs=1, refit=True,
     )
-    search.fit(X.iloc[train], y[train])
+    search.fit(X.iloc[train], y[train], groups=groups[train])
     best = search.best_estimator_
     if task == "clf":
         p, calibrated = _probability(best, X.iloc[test])
@@ -158,10 +185,8 @@ def _grid_size(grid):
 
 # ── the study for one task / scenario ────────────────────────────────────────
 
-def run_study(X, y, scenario, registry, task, score_key, higher_is_better, label):
-    cv_a = RepeatedStratifiedKFold(n_splits=N_SPLITS, n_repeats=N_REPEATS_A, random_state=SEED) if task == "clf" \
-        else RepeatedKFold(n_splits=N_SPLITS, n_repeats=N_REPEATS_A, random_state=SEED)
-    splits_a = list(cv_a.split(X, y))
+def run_study(X, y, groups, scenario, registry, task, score_key, higher_is_better, label):
+    splits_a = grouped_splits(y, groups, N_SPLITS, N_REPEATS_A, SEED)
     fit = _fit_score_clf if task == "clf" else _fit_score_reg
 
     # Stage A: defaults, repeated CV
@@ -196,9 +221,7 @@ def run_study(X, y, scenario, registry, task, score_key, higher_is_better, label
         top.append("logistic")
     if "linear" in registry and "linear" not in top:
         top.append("linear")
-    cv_b = RepeatedStratifiedKFold(n_splits=N_SPLITS, n_repeats=N_REPEATS_B, random_state=SEED + 1) if task == "clf" \
-        else RepeatedKFold(n_splits=N_SPLITS, n_repeats=N_REPEATS_B, random_state=SEED + 1)
-    splits_b = list(cv_b.split(X, y))
+    splits_b = grouped_splits(y, groups, N_SPLITS, N_REPEATS_B, SEED + 1)
     log(f"[{label}] Stage B: nested CV for {top} ({len(splits_b)} outer folds)")
     tuned = {}
     for key in top:
@@ -206,7 +229,7 @@ def run_study(X, y, scenario, registry, task, score_key, higher_is_better, label
         grid = registry[key][2]
         if grid:
             folds = Parallel(n_jobs=N_JOBS)(
-                delayed(_nested_fold)(pipe, grid, X, y, tr, te, scenario, task) for tr, te in splits_b)
+                delayed(_nested_fold)(pipe, grid, X, y, groups, tr, te, scenario, task) for tr, te in splits_b)
         else:                                # nothing to tune: same as plain CV on these splits
             folds = Parallel(n_jobs=N_JOBS)(delayed(fit)(pipe, X, y, tr, te) for tr, te in splits_b)
         tuned[key] = {"folds": folds, "summary": summarise(folds)}
@@ -241,11 +264,11 @@ def run_study(X, y, scenario, registry, task, score_key, higher_is_better, label
     best_params = {}
     if grid:
         scoring = "roc_auc" if task == "clf" else "neg_root_mean_squared_error"
-        inner = StratifiedKFold(5, shuffle=True, random_state=SEED) if task == "clf" else KFold(5, shuffle=True, random_state=SEED)
+        inner = GroupStratified(5)
         search = RandomizedSearchCV(
             pipe, {f"{pipe.steps[-1][0]}__{k}": v for k, v in grid.items()},
             n_iter=min(12, _grid_size(grid)), scoring=scoring, cv=inner, random_state=SEED, n_jobs=N_JOBS)
-        search.fit(X, y)
+        search.fit(X, y, groups=groups)
         best_params = {k.split("__", 1)[1]: v for k, v in search.best_params_.items()}
         best_params = {k: (list(v) if isinstance(v, tuple) else v) for k, v in best_params.items()}
     return {
@@ -256,13 +279,13 @@ def run_study(X, y, scenario, registry, task, score_key, higher_is_better, label
     }
 
 
-def clf_examination(X, y, scenario, key, params):
+def clf_examination(X, y, groups, scenario, key, params):
     """Out-of-fold behaviour of the selected classifier."""
     params = {k: (tuple(v) if isinstance(v, list) else v) for k, v in params.items()}
     pipe = _make_pipe(scenario, CLASSIFIERS, key, params)
-    cv = StratifiedKFold(N_SPLITS, shuffle=True, random_state=SEED)
+    cv = GroupStratified(N_SPLITS)
     method = "predict_proba" if hasattr(pipe, "predict_proba") else "decision_function"
-    raw = cross_val_predict(pipe, X, y, cv=cv, method=method, n_jobs=N_JOBS)
+    raw = cross_val_predict(pipe, X, y, cv=cv, groups=groups, method=method, n_jobs=N_JOBS)
     p = raw[:, 1] if method == "predict_proba" else 1 / (1 + np.exp(-raw))
 
     thresholds = []
@@ -278,7 +301,8 @@ def clf_examination(X, y, scenario, key, params):
     tn, fp = int(((pred == 0) & (y == 0)).sum()), int(((pred == 1) & (y == 0)).sum())
     fn, tp = int(((pred == 0) & (y == 1)).sum()), int(((pred == 1) & (y == 1)).sum())
 
-    Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.25, stratify=y, random_state=SEED)
+    tr, te = next(StratifiedGroupKFold(4, shuffle=True, random_state=SEED).split(X, y, groups))
+    Xtr, Xte, ytr, yte = X.iloc[tr], X.iloc[te], y[tr], y[te]
     model = clone(pipe).fit(Xtr, ytr)
     imp = permutation_importance(model, Xte, yte, scoring="roc_auc", n_repeats=8, random_state=SEED, n_jobs=N_JOBS)
     order = np.argsort(-imp.importances_mean)[:10]
@@ -286,7 +310,7 @@ def clf_examination(X, y, scenario, key, params):
                    "sd": round(float(imp.importances_std[i]), 4)} for i in order]
 
     sizes, train_s, test_s = learning_curve(
-        pipe, X, y, cv=StratifiedKFold(N_SPLITS, shuffle=True, random_state=SEED), scoring="roc_auc",
+        pipe, X, y, groups=groups, cv=GroupStratified(N_SPLITS), scoring="roc_auc",
         train_sizes=[0.1, 0.25, 0.5, 0.75, 1.0], n_jobs=N_JOBS, random_state=SEED)
     return {
         "thresholds": thresholds, "calibration": calibration, "brier": round(float(brier_score_loss(y, p)), 4),
@@ -296,10 +320,11 @@ def clf_examination(X, y, scenario, key, params):
     }
 
 
-def reg_examination(X, y, key, params):
+def reg_examination(X, y, groups, scenario, key, params):
     params = {k: (tuple(v) if isinstance(v, list) else v) for k, v in params.items()}
-    pipe = _make_pipe("after_sem1", REGRESSORS, key, params)
-    pred = cross_val_predict(pipe, X, y, cv=KFold(N_SPLITS, shuffle=True, random_state=SEED), n_jobs=N_JOBS)
+    pipe = _make_pipe(scenario, REGRESSORS, key, params)
+    cv = GroupStratified(N_SPLITS)
+    pred = cross_val_predict(pipe, X, y, cv=cv, groups=groups, n_jobs=N_JOBS)
     resid = y - pred
     return {"within_5_marks": round(float((np.abs(resid) <= 5).mean()), 3),
             "within_10_marks": round(float((np.abs(resid) <= 10).mean()), 3),
@@ -314,8 +339,8 @@ def write_markdown(result):
 
     lines = ["# 09 - Model selection analysis", "",
              "_Generated by `python -m app.ml.model_selection`; the same numbers are on the Model Selection page._", "",
-             f"Dataset: {result['meta']['n_students']} real university students "
-             f"(UCI *Predict Students' Dropout and Academic Success*), dropout rate {result['meta']['dropout_rate']:.1%}.", "",
+             f"Dataset: {result['meta']['n_students']} real student records "
+             f"(UCI *Student Performance*, Cortez & Silva 2008), fail rate {result['meta']['fail_rate']:.1%}.", "",
              "## Method", "",
              f"1. **Stage A**: {len(CLASSIFIERS)} classifiers, default settings, {N_SPLITS}-fold cross-validation repeated "
              f"{N_REPEATS_A} times ({N_SPLITS * N_REPEATS_A} scores per model, identical splits).",
@@ -325,7 +350,7 @@ def write_markdown(result):
              "(simplest model within one standard error of the best). `p` values are corrected resampled paired t-tests "
              "(Nadeau & Bengio, 2003) against the best model; p < 0.05 means the difference is unlikely to be chance.", ""]
     for scen, block in result["classification"].items():
-        lines += [f"## Dropout classification - {SCENARIOS[scen]['label']}", "",
+        lines += [f"## Will the student fail the course? - {SCENARIOS[scen]['label']}", "",
                   "### Stage A (default settings)", "",
                   "| Model | Accuracy | Balanced acc. | Recall | F1 | ROC-AUC | p vs best |", "|---|---|---|---|---|---|---|"]
         for c in sorted(block["candidates"], key=lambda c: -(c["metrics"]["roc_auc"]["mean"] or 0)):
@@ -339,12 +364,12 @@ def write_markdown(result):
             lines.append(f"| {c['label']} | {pm(m['accuracy'])} | {pm(m['recall'])} | {pm(m['f1'])} | {pm(m['roc_auc'])} | "
                          f"{'best' if c['is_best'] else c['p_vs_best']} | {'yes' if c['within_one_se'] else 'no'} |")
         lines += ["", f"**Selected: {block['selected_label']}** - parameters {block['selected_params'] or 'defaults'}.", ""]
-    reg = result["regression"]
-    lines += ["## Semester-2 mark regression (after semester 1)", "", "| Model | RMSE | MAE | R² |", "|---|---|---|---|"]
-    for c in reg["tuned"]:
-        m = c["metrics"]
-        lines.append(f"| {c['label']} | {pm(m['rmse'])} | {pm(m['mae'])} | {pm(m['r2'])} |")
-    lines += ["", f"**Selected: {reg['selected_label']}.**", ""]
+    for scen, reg in result["regression"].items():
+        lines += [f"## Final-mark regression - {SCENARIOS[scen]['label']}", "", "| Model | RMSE | MAE | R² |", "|---|---|---|---|"]
+        for c in reg["tuned"]:
+            m = c["metrics"]
+            lines.append(f"| {c['label']} | {pm(m['rmse'])} | {pm(m['mae'])} | {pm(m['r2'])} |")
+        lines += ["", f"**Selected: {reg['selected_label']}.**", ""]
     with open(OUT_MD, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
@@ -363,10 +388,11 @@ def main():
     with app.app_context():
         df = load_students()
     if QUICK:
-        df = df.sample(900, random_state=SEED).reset_index(drop=True)
+        df = df.sample(500, random_state=SEED).reset_index(drop=True)
     start = time.time()
     result = {"meta": {
-        "n_students": int(len(df)), "dropout_rate": float(df["dropout"].mean()),
+        "n_students": int(df["fail"].notna().sum()), "n_people": int(df["person_id"].nunique()),
+        "fail_rate": float(df["fail"].mean()),
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "scikit_learn": sklearn.__version__, "python": platform.python_version(), "seed": SEED,
         "cv": {"splits": N_SPLITS, "repeats_stage_a": N_REPEATS_A, "repeats_stage_b": N_REPEATS_B,
@@ -374,22 +400,23 @@ def main():
     }, "classification": {}, "regression": {}}
 
     for scenario in SCENARIOS:
-        X, y = prepare_classification(df, scenario)
-        block = run_study(X, y, scenario, CLASSIFIERS, "clf", "roc_auc", True, f"classification/{scenario}")
+        X, y, groups = prepare_classification(df, scenario)
+        block = run_study(X, y, groups, scenario, CLASSIFIERS, "clf", "roc_auc", True, f"classification/{scenario}")
         block["n"] = int(len(y))
         block["positive_rate"] = round(float(y.mean()), 4)
-        block["examination"] = clf_examination(X, y, scenario, block["selected"], block["selected_params"])
+        block["examination"] = clf_examination(X, y, groups, scenario, block["selected"], block["selected_params"])
         result["classification"][scenario] = block
         if not QUICK:
             with open(OUT_JSON, "w") as f:
                 json.dump(result, f, indent=1)
 
-    X, y = prepare_regression(df)
-    block = run_study(X, y, "after_sem1", REGRESSORS, "reg", "rmse", False, "regression/s2_mark")
-    block["n"] = int(len(y))
-    block["target_sd"] = round(float(y.std()), 3)
-    block["examination"] = reg_examination(X, y, block["selected"], block["selected_params"])
-    result["regression"] = block
+    for scenario in SCENARIOS:
+        X, y, groups = prepare_regression(df, scenario)
+        block = run_study(X, y, groups, scenario, REGRESSORS, "reg", "rmse", False, f"regression/{scenario}")
+        block["n"] = int(len(y))
+        block["target_sd"] = round(float(y.std()), 3)
+        block["examination"] = reg_examination(X, y, groups, scenario, block["selected"], block["selected_params"])
+        result["regression"][scenario] = block
     result["meta"]["minutes"] = round((time.time() - start) / 60, 1)
     if QUICK:
         log("quick test finished OK (nothing saved)")

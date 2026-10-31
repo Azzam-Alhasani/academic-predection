@@ -35,12 +35,8 @@ def _login(client, username, password):
 
 
 def _student_form(token):
-    return {
-        "csrf_token": token, "name": "Test Student", "gender": "Female", "programme": "Nursing",
-        "attendance": "Daytime", "scholarship": "no", "tuition_paid": "yes", "debtor": "no", "age": 19,
-        "admission_mark": 60, "prev_mark": 60, "s1_enrolled": 6, "s1_approved": 5, "s1_mark": 62,
-        "s2_enrolled": 6, "s2_approved": 4, "s2_mark": 58, "outcome": "Enrolled",
-    }
+    return {"csrf_token": token, "name": "Test Student", "course": "Mathematics", "t1_mark": 62, "t2_mark": 58,
+            "absences": 4, "final_mark": ""}
 
 
 # ── grading ─────────────────────────────────────────────
@@ -49,17 +45,21 @@ def test_grade_scale():
     assert grading.points_for(75) == 3.0
 
 
-def test_cgpa_is_weighted_by_courses():
-    assert grading.semester_gpa(75, 6, 6) == 3.0                     # mark 75 = B = 3.0, all passed
-    assert grading.semester_gpa(75, 3, 6) == 1.5                     # only half the courses passed
-    assert grading.cgpa(75, 6, 6, 50, 6, 6) == 2.0                   # (3.0 x 6 + 1.0 x 6) / 12
-    assert grading.cgpa(0, 0, 0) is None
+def test_gpa_is_the_average_of_term_points():
+    assert grading.gpa(75, 50) == 2.0                    # (3.0 + 1.0) / 2
+    assert grading.gpa(75, None) == 3.0                  # term 2 not yet done
+    assert grading.gpa(None, None) is None
+    assert grading.average_mark(60, 50) == 55.0
 
 
-def test_required_gpa_formula():
-    needed, reachable = grading.required_semester_gpa(2.0, 12, 2.5, 6)
-    assert needed == pytest.approx((2.5 * 18 - 2.0 * 12) / 6) and reachable
-    assert grading.required_semester_gpa(2.0, 12, 4.0, 1)[1] is False   # needs more than 4.0
+def test_required_final_mark_formula():
+    needed, reachable = grading.required_final_mark(50, 60, 60)      # 3 x 60 - 50 - 60
+    assert needed == 70 and reachable
+    assert grading.required_final_mark(50, 60, 100)[1] is False       # would need more than 100
+
+
+def test_absence_bands():
+    assert grading.absence_band(0) == "No absences" and grading.absence_band(12) == "11+ absences"
 
 
 # ── pages and data ──────────────────────────────────────
@@ -72,33 +72,53 @@ def test_dataset_is_the_real_uci_data(client):
     from app.data.data_loader import load_students
     with client.application.app_context():
         df = load_students()
-    assert len(df) == 4424
-    assert set(df["outcome"]) == {"Dropout", "Graduate", "Enrolled"}
-    assert df["cgpa"].dropna().between(0, 4).all()
+    assert len(df) == 1044                      # 395 Mathematics + 649 Portuguese records
+    assert df["person_id"].nunique() == 662     # 382 students appear in both courses
+    assert set(df["result"]) == {"Pass", "Fail"}
+    assert df["gpa"].between(0, 4).all()
+    extras = {"age", "gender", "scholarship", "tuition_paid", "debtor", "programme"}
+    assert not extras & set(df.columns)         # only marks, absences and course are kept
 
 
 def test_calculator_returns_risk_and_calculations(client):
     token = _csrf(client)
     form = _student_form(token)
-    form.pop("name"); form.pop("outcome")
+    form.pop("name"); form.pop("final_mark")
     html = client.post("/predictions/", data=form).get_data(as_text=True)
-    assert "CGPA" in html and "alert-danger" not in html
+    assert "GPA" in html and "Risk of failing" in html and "alert-danger" not in html
 
 
 def test_calculator_rejects_bad_input(client):
-    form = _student_form(_csrf(client)); form["s1_mark"] = 150
+    form = _student_form(_csrf(client)); form["t1_mark"] = 150
     assert "between 0 and 100" in client.post("/predictions/", data=form).get_data(as_text=True)
+
+
+def test_calculator_works_without_term_2(client):
+    form = _student_form(_csrf(client)); form.pop("name"); form.pop("final_mark"); form["t2_mark"] = ""
+    html = client.post("/predictions/", data=form).get_data(as_text=True)
+    assert "after term 1" in html and "alert-danger" not in html
 
 
 def test_model_study_is_present_and_honest():
     from app.ml.predictor import load_selection
     study = load_selection()
-    for scen in ("after_sem1", "after_sem2"):
+    for scen in ("after_term1", "after_term2"):
         block = study["classification"][scen]
         assert len(block["candidates"]) >= 10 and block["selected"]
         base = next(c for c in block["candidates"] if c["key"] == "majority")
         best = next(c for c in block["tuned"] if c["key"] == block["selected"])
-        assert best["metrics"]["accuracy"]["mean"] > base["metrics"]["accuracy"]["mean"] + 0.1
+        assert best["metrics"]["accuracy"]["mean"] >= 0.85                       # the target accuracy
+        assert best["metrics"]["accuracy"]["mean"] > base["metrics"]["accuracy"]["mean"] + 0.05
+        assert study["regression"][scen]["selected"]
+
+
+def test_no_leakage_between_a_students_courses():
+    from app.ml.model_selection import grouped_splits
+    import numpy as np
+    groups = np.repeat(np.arange(100), 2)                    # every student has two records
+    y = np.tile([0, 1], 100)
+    for train, test in grouped_splits(y, groups, 5, 2, 1):
+        assert not set(groups[train]) & set(groups[test])
 
 
 # ── access control ──────────────────────────────────────
