@@ -12,8 +12,8 @@
 <div class="row g-4 mt-1">
   <div class="col-12"><div class="card"><div class="card-body">
     <h5>How the model was chosen</h5>
-    <p class="mb-2">Instead of picking a model by habit, <strong>{{ study.classification.after_sem1.candidates|length }} candidate models</strong> were compared on
-      {{ study.meta.n_students }} real students (dropout rate {{ '%.1f'|format(study.meta.dropout_rate * 100) }}%) with the same evaluation rules.</p>
+    <p class="mb-2">Instead of picking a model by habit, <strong>{{ study.classification.after_term1.candidates|length }} candidate models</strong> were compared on
+      {{ study.meta.n_students }} real course records of {{ study.meta.n_people }} students (failure rate {{ '%.1f'|format(study.meta.fail_rate * 100) }}%; a student's courses are always kept on the same side of every test split) with the same evaluation rules.</p>
     <ol class="mb-2 small">
       <li><strong>Fair scoring.</strong> {{ study.meta.cv.splits }}-fold cross-validation repeated {{ study.meta.cv.repeats_stage_a }} times: every student is scored by a model that never saw them, and every model sees identical splits.</li>
       <li><strong>Honest tuning.</strong> The strongest models were tuned with <em>nested</em> cross-validation: settings are chosen on training data only and scored on students the tuning never saw, so tuning cannot inflate the result.</li>
@@ -24,9 +24,9 @@
   </div></div></div>
 
   {% for scen, spec in scenarios.items() %}{% set b = study.classification[scen] %}{% set e = b.examination %}
-  <div class="col-12"><h4 class="mt-2">Predicting withdrawal - {{ spec.label|lower }}</h4>
-    <p class="text-muted small mb-0">{{ b.n }} students · {{ '%.1f'|format(b.positive_rate * 100) }}% withdrew.
-      {% if scen == 'after_sem2' %}Semester-2 data includes students who stopped enrolling, which makes withdrawal easier to spot - the earlier scenario is the more useful warning.{% endif %}</p></div>
+  <div class="col-12"><h4 class="mt-2">Will the student fail the course? - {{ spec.label|lower }}</h4>
+    <p class="text-muted small mb-0">{{ b.n }} students · {{ '%.1f'|format(b.positive_rate * 100) }}% failed the course.
+      {% if scen == 'after_term2' %}The term-2 warning is more accurate but arrives later; the term-1 warning leaves more time to act.{% endif %}</p></div>
 
   <div class="col-lg-6"><div class="card h-100"><div class="card-header">Stage A - default settings ({{ study.meta.cv.splits * study.meta.cv.repeats_stage_a }} scores each)</div>
     <div class="table-responsive"><table class="table table-sm mb-0">
@@ -58,30 +58,38 @@
     <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Alert if risk ≥</th><th>Precision</th><th>Recall</th><th>Accuracy</th></tr></thead><tbody>
       {% for t in e.thresholds %}<tr {% if t.threshold == 0.5 %}class="table-active"{% endif %}><td>{{ (t.threshold * 100)|int }}%</td><td>{{ '%.0f'|format(t.precision * 100) }}%</td><td>{{ '%.0f'|format(t.recall * 100) }}%</td><td>{{ '%.0f'|format(t.accuracy * 100) }}%</td></tr>{% endfor %}
     </tbody></table></div>
-    <div class="card-body small">A lower threshold catches more students who would withdraw but also raises more false alarms. At 50%: {{ e.confusion.tp }} caught, {{ e.confusion.fn }} missed, {{ e.confusion.fp }} false alarms.</div></div></div>
+    <div class="card-body small">A lower threshold catches more students who would fail but also raises more false alarms. At 50%: {{ e.confusion.tp }} caught, {{ e.confusion.fn }} missed, {{ e.confusion.fp }} false alarms.</div></div></div>
   {% endfor %}
 
-  {% set r = study.regression %}
-  <div class="col-12"><h4 class="mt-2">Projecting the semester-2 mark (after semester 1)</h4></div>
-  <div class="col-lg-7"><div class="card h-100"><div class="card-header">Tuned models (lower RMSE is better; the average mark varies by {{ r.target_sd }} marks)</div>
+  {% for scen, spec in scenarios.items() %}{% set r = study.regression[scen] %}
+  <div class="col-12"><h4 class="mt-2">Projecting the final mark - {{ spec.label|lower }}</h4></div>
+  <div class="col-lg-7"><div class="card h-100"><div class="card-header">Tuned models (lower RMSE is better; final marks vary by {{ r.target_sd }} marks)</div>
     <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Model</th><th>RMSE (marks)</th><th>MAE (marks)</th><th>R²</th><th>vs best</th></tr></thead><tbody>
       {% for c in r.tuned %}<tr {% if c.key == r.selected %}class="table-active fw-semibold"{% endif %}><td>{{ c.label }}{% if c.key == r.selected %} <span class="badge bg-primary">selected</span>{% endif %}</td>
         <td>{{ pm(c.metrics.rmse) }}</td><td>{{ pm(c.metrics.mae) }}</td><td>{{ pm(c.metrics.r2) }}</td><td>{{ pval(c) }}</td></tr>{% endfor %}
     </tbody></table></div></div></div>
   <div class="col-lg-5"><div class="card h-100"><div class="card-body">
     <h6>What this means</h6>
-    <p class="small mb-0">The selected model's projection is within 5 marks of the real mark for {{ '%.0f'|format(r.examination.within_5_marks * 100) }}% of students and within 10 marks for {{ '%.0f'|format(r.examination.within_10_marks * 100) }}%.
-      It explains about half of the variation (R² ≈ {{ pm((r.tuned|selectattr('key', 'equalto', r.selected)|list)[0].metrics.r2) }}), so treat it as a guide, not a forecast.</p></div></div></div>
+    <p class="small mb-0">The projection is within 5 marks of the real final mark for {{ '%.0f'|format(r.examination.within_5_marks * 100) }}% of records and within 10 marks for {{ '%.0f'|format(r.examination.within_10_marks * 100) }}%
+      (R² {{ pm((r.tuned|selectattr('key', 'equalto', r.selected)|list)[0].metrics.r2) }}). Treat it as a guide, not a forecast.</p></div></div></div>
+  {% endfor %}
 
   <div class="col-12"><div class="card"><div class="card-body">
     <h5>Conclusions and limits</h5>
+    {% set c1 = (study.classification.after_term1.tuned|selectattr('key', 'equalto', study.classification.after_term1.selected)|list)[0] %}
+    {% set c2 = (study.classification.after_term2.tuned|selectattr('key', 'equalto', study.classification.after_term2.selected)|list)[0] %}
+    {% set base = (study.classification.after_term1.candidates|selectattr('key', 'equalto', 'majority')|list)[0] %}
     <ul class="small mb-0">
-      <li><strong>Target accuracy.</strong> The best models reach about {{ '%.0f'|format((study.classification.after_sem1.tuned|selectattr('key', 'equalto', study.classification.after_sem1.selected)|list)[0].metrics.accuracy.mean * 100) }}% after semester 1 and
-        {{ '%.0f'|format((study.classification.after_sem2.tuned|selectattr('key', 'equalto', study.classification.after_sem2.selected)|list)[0].metrics.accuracy.mean * 100) }}% after semester 2, against {{ '%.0f'|format((study.classification.after_sem1.candidates|selectattr('key', 'equalto', 'majority')|list)[0].metrics.accuracy.mean * 100) }}% for a model that always says "stays".</li>
-      <li><strong>The top models are statistically tied.</strong> Random forest, gradient boosting, logistic regression and the neural network differ by less than the noise (p-values above 0.05). Logistic regression is almost as good and fully explainable, which is why it is also used to show <em>why</em> a student is flagged.</li>
-      <li><strong>The limit is the data, not the algorithm.</strong> Five very different model families agree, and the learning curve is flat. Better accuracy would need new information (attendance, assessment scores, engagement), not a fancier model.</li>
-      <li><strong>Imbalance matters.</strong> About one student in three withdraws, so recall is reported next to accuracy: a model can look accurate and still miss many at-risk students.</li>
-      <li><strong>Transfer.</strong> The data is from one Portuguese polytechnic. For UTAS, retrain on UTAS records with the same script before relying on the numbers.</li>
+      <li><strong>Target accuracy.</strong> The selected models reach about <strong>{{ '%.0f'|format(c1.metrics.accuracy.mean * 100) }}%</strong> after term 1 and
+        <strong>{{ '%.0f'|format(c2.metrics.accuracy.mean * 100) }}%</strong> after term 2, against {{ '%.0f'|format(base.metrics.accuracy.mean * 100) }}% for a model that always says "passes".
+        ROC-AUC is {{ pm(c1.metrics.roc_auc) }} and {{ pm(c2.metrics.roc_auc) }}.</li>
+      <li><strong>Marks do the work.</strong> The permutation-importance charts show that the term marks carry almost all the signal. Absences and course add very little once the marks are known.
+        Absences matter mostly at the extreme (11 or more) - see Analytics.</li>
+      <li><strong>Several models are statistically tied.</strong> After term 2, logistic regression, gradient boosting and random forest are within noise of each other (p &gt; 0.05), so the simplest (logistic regression, which can also explain a result) is chosen.</li>
+      <li><strong>The limit is the data, not the algorithm.</strong> Different model families agree and the learning curve flattens. Higher accuracy would need new information (assessment scores, participation), not a fancier model.</li>
+      <li><strong>Missed students.</strong> At the default 50% alert level about {{ '%.0f'|format((1 - c1.metrics.recall.mean) * 100) }}% of students who later fail are not flagged after term 1.
+        Lowering the alert level to 40% flags more of them; the threshold table shows the trade-off.</li>
+      <li><strong>Transfer.</strong> The data is from two Portuguese secondary-school courses, not UTAS. Retrain on UTAS records with the same script (<code>python -m app.ml.model_selection</code>) before relying on the numbers.</li>
     </ul></div></div></div>
 </div>
 {% endif %}

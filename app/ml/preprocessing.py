@@ -1,15 +1,17 @@
 """
 Feature definitions and preprocessing for the ML pipeline.
 
-Two prediction moments (scenarios) are supported, because a withdrawal warning is only
-useful if it comes early:
-  * after_sem1 - background + first-semester results
-  * after_sem2 - background + first- and second-semester results
+Only the factors that matter for results are used: the term marks, the number of absences and
+the course. Two prediction moments (scenarios) are supported, because a warning is only useful
+if it comes early:
+  * after_term1 - term 1 mark + absences + course
+  * after_term2 - term 1 mark, term 2 mark, the change between them + absences + course
 
-Targets
-  * classification: dropout (1) vs graduate / still enrolled (0)
-  * regression:     second-semester mark (0-100), predicted from the after_sem1 features
-The final outcome is never used as an input.
+Targets (known only for records that have a final mark)
+  * classification: fail (1) = final mark below the 50% pass mark, pass (0)
+  * regression:     the final mark (0-100)
+The final mark is never used as an input. `person_id` is only used to keep a student's two
+courses together in train/test splits (never a model input).
 """
 
 import numpy as np
@@ -19,36 +21,25 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-BACKGROUND_NUM = ["age", "admission_mark", "prev_mark"]
-BACKGROUND_CAT = ["gender", "programme", "attendance", "scholarship", "tuition_paid", "debtor"]
-S1_NUM = ["s1_enrolled", "s1_approved", "s1_mark", "s1_completion"]
-S2_NUM = ["s2_enrolled", "s2_approved", "s2_mark", "s2_completion"]
+CATEGORICAL = ["course"]
 
 SCENARIOS = {
-    "after_sem1": {
-        "label": "After semester 1",
-        "numeric": BACKGROUND_NUM + S1_NUM,
-        "categorical": BACKGROUND_CAT,
-    },
-    "after_sem2": {
-        "label": "After semester 2",
-        "numeric": BACKGROUND_NUM + S1_NUM + S2_NUM,
-        "categorical": BACKGROUND_CAT,
-    },
+    "after_term1": {"label": "After term 1", "numeric": ["t1_mark", "absences"], "categorical": CATEGORICAL},
+    "after_term2": {"label": "After term 2", "numeric": ["t1_mark", "t2_mark", "trend", "absences"],
+                    "categorical": CATEGORICAL},
 }
 
-CLASSIFICATION_TARGET = "dropout"
-REGRESSION_TARGET = "s2_mark"
+CLASSIFICATION_TARGET = "fail"
+REGRESSION_TARGET = "final_mark"
 SEED = 42
 
 
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Add the per-semester completion rates used as model inputs."""
+    """Add the change between term 1 and term 2 (a model input)."""
     df = df.copy()
-    for sem in ("s1", "s2"):
-        enrolled = pd.to_numeric(df[f"{sem}_enrolled"], errors="coerce")
-        approved = pd.to_numeric(df[f"{sem}_approved"], errors="coerce")
-        df[f"{sem}_completion"] = np.where(enrolled > 0, approved / enrolled.where(enrolled > 0, 1), 0.0)
+    for col in ("t1_mark", "t2_mark"):
+        df[col] = pd.to_numeric(df.get(col), errors="coerce")
+    df["trend"] = df["t2_mark"] - df["t1_mark"]
     return df
 
 
@@ -58,7 +49,7 @@ def feature_columns(scenario: str) -> list:
 
 
 def build_preprocessor(scenario: str) -> ColumnTransformer:
-    """Impute missing values, scale numbers, one-hot encode categories (dense output)."""
+    """Impute missing values, scale numbers, one-hot encode the course (dense output)."""
     spec = SCENARIOS[scenario]
     numeric = make_pipeline(SimpleImputer(strategy="median"), StandardScaler())
     categorical = make_pipeline(
@@ -71,17 +62,22 @@ def build_preprocessor(scenario: str) -> ColumnTransformer:
     ])
 
 
+def _labelled(df: pd.DataFrame) -> pd.DataFrame:
+    df = add_features(df)
+    return df[pd.to_numeric(df["final_mark"], errors="coerce").notna()].reset_index(drop=True)
+
+
 def prepare_classification(df: pd.DataFrame, scenario: str):
-    """(X, y) with y = 1 for students who withdrew."""
-    df = add_features(df)
-    return df[feature_columns(scenario)], df[CLASSIFICATION_TARGET].astype(int).to_numpy()
+    """(X, y, groups): y = 1 for a failed course; groups link one student's courses."""
+    df = _labelled(df)
+    y = (pd.to_numeric(df["final_mark"]) < 50).astype(int).to_numpy()
+    return df[feature_columns(scenario)], y, df["person_id"].to_numpy()
 
 
-def prepare_regression(df: pd.DataFrame):
-    """(X, y): rows where the student passed courses in both semesters; y = semester-2 mark."""
-    df = add_features(df)
-    df = df[(df["s1_approved"] > 0) & (df["s2_approved"] > 0)]
-    return df[feature_columns("after_sem1")], df[REGRESSION_TARGET].astype(float).to_numpy()
+def prepare_regression(df: pd.DataFrame, scenario: str):
+    """(X, y, groups): y = the final mark."""
+    df = _labelled(df)
+    return df[feature_columns(scenario)], pd.to_numeric(df["final_mark"]).to_numpy(float), df["person_id"].to_numpy()
 
 
 def record_to_frame(record: dict, scenario: str) -> pd.DataFrame:

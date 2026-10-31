@@ -10,16 +10,16 @@ What is sourced and what is assumed
   * ASSUMED (not found in a UTAS document): the grade points on the 4.0 scale
     (the plus grades sit half a point above the letter) and the academic-standing
     thresholds below. Change GRADE_SCALE / the thresholds if the handbook differs.
-  * The student data comes from a university that grades 0-20, where 10-14 is a normal
-    result. Converted to percentages that is 50-70% (D to C+), so a typical graduate has a
-    CGPA of about 1.75. Standing thresholds are therefore scaled to the converted data
-    (92% of graduates are above the "good standing" line, 54% of dropouts are below the
-    "warning" line). With real UTAS marks, use the handbook values (commonly CGPA 2.0).
+  * The data's marks are low (average about 56%, mostly D to C), so standing thresholds are
+    scaled to it: in the data, students with GPA 1.0 or more almost never fail (about 1%),
+    those between 0.5 and 1.0 fail about 3 times in 10, and those under 0.5 about 8 times in 10.
+    With real UTAS marks, use the handbook values (commonly 2.0 for good standing).
 
-How the numbers are computed
-  Semester GPA   = GP(avg mark of approved courses) x approved / enrolled
-                   (a failed course counts as 0 grade points)
-  CGPA           = (GP1 x approved1 + GP2 x approved2) / (enrolled1 + enrolled2)
+How the numbers are computed (one record = one student in one course)
+  Term GPA    = grade points of the term mark                       (e.g. 62% -> D+ -> 1.5)
+  GPA         = average of the term GPAs on record
+  Average mark= average of the term marks on record
+  Goal planner: the final mark needed so the three marks average to a target (equal weights assumed)
 """
 
 import math
@@ -40,12 +40,12 @@ GRADE_SCALE = [
 PASS_MARK = 50.0
 MAX_POINTS = 4.0
 
-# Academic standing from CGPA (scaled to the converted data - see the note above).
-GOOD_STANDING_CGPA = 1.0
-WARNING_CGPA = 0.5
-MIN_COMPLETION_RATE = 0.75      # share of enrolled courses a student should pass
+# Academic standing from GPA (scaled to the data - see the note above).
+GOOD_STANDING_GPA = 1.0
+WARNING_GPA = 0.5
+ABSENCE_BANDS = [(0, 0, "No absences"), (1, 5, "1-5 absences"), (6, 10, "6-10 absences"), (11, 10**6, "11+ absences")]
 
-MARK_FORMULA = "Percentage mark = semester average grade (0-20) x 5"
+MARK_FORMULA = "Percentage mark = grade (0-20) x 5"
 
 
 def grade_for(mark) -> dict:
@@ -66,30 +66,36 @@ def points_for(mark) -> float:
     return grade_for(mark)["points"]
 
 
-def semester_gpa(mark, approved, enrolled):
-    """Semester GPA over all enrolled courses; None when nothing was enrolled."""
-    enrolled, approved = _num(enrolled), _num(approved)
-    if enrolled <= 0:
-        return None
-    return round(points_for(mark) * min(approved, enrolled) / enrolled, 2)
+def term_gpa(mark):
+    """Grade points of one term mark."""
+    return points_for(mark)
 
 
-def cgpa(s1_mark, s1_approved, s1_enrolled, s2_mark=None, s2_approved=0, s2_enrolled=0):
-    """Cumulative GPA over the semesters on record; None when nothing was enrolled."""
-    total_enrolled = _num(s1_enrolled) + _num(s2_enrolled)
-    if total_enrolled <= 0:
-        return None
-    quality = (points_for(s1_mark) * min(_num(s1_approved), _num(s1_enrolled))
-               + points_for(s2_mark) * min(_num(s2_approved), _num(s2_enrolled)))
-    return round(quality / total_enrolled, 2)
+def gpa(*marks):
+    """Average grade points of the term marks given (None values skipped); None when there are none."""
+    values = [points_for(m) for m in marks if m is not None and not (isinstance(m, float) and math.isnan(m))]
+    return round(sum(values) / len(values), 2) if values else None
 
 
-def standing(cgpa_value) -> str:
-    if cgpa_value is None:
+def average_mark(*marks):
+    values = [_clean(m) for m in marks if m is not None and not (isinstance(m, float) and math.isnan(m))]
+    return round(sum(values) / len(values), 1) if values else None
+
+
+def absence_band(absences) -> str:
+    n = int(_num(absences))
+    for low, high, label in ABSENCE_BANDS:
+        if low <= n <= high:
+            return label
+    return ABSENCE_BANDS[-1][2]
+
+
+def standing(gpa_value) -> str:
+    if gpa_value is None:
         return "No courses yet"
-    if cgpa_value >= GOOD_STANDING_CGPA:
+    if gpa_value >= GOOD_STANDING_GPA:
         return "Good standing"
-    if cgpa_value >= WARNING_CGPA:
+    if gpa_value >= WARNING_GPA:
         return "Academic warning"
     return "Academic probation"
 
@@ -112,29 +118,16 @@ def mark_for_points(target_points):
     return float(min(candidates)) if candidates else None
 
 
-def required_semester_gpa(current_cgpa, enrolled_so_far, target_cgpa, next_courses):
+def required_final_mark(t1, t2, target_average):
     """
-    GPA needed over the next `next_courses` courses to reach `target_cgpa`:
+    Final mark needed so that the three marks average to `target_average` (equal weights):
 
-        needed = (target x (E + n) - CGPA x E) / n        E = courses enrolled so far
+        needed = 3 x target - term 1 - term 2
 
-    Returns (needed_gpa, reachable). Not reachable when it is above 4.0.
+    Returns (needed mark, reachable). Not reachable when it is above 100.
     """
-    n = max(1, int(next_courses))
-    e = _num(enrolled_so_far)
-    needed = (target_cgpa * (e + n) - (current_cgpa or 0.0) * e) / n
-    return round(max(needed, 0.0), 2), needed <= MAX_POINTS
-
-
-def courses_to_pass(enrolled_so_far, approved_so_far, next_courses, target_rate=MIN_COMPLETION_RATE):
-    """
-    Courses to pass next semester so that overall completion reaches `target_rate`:
-
-        k = ceil(rate x (E + n) - A)         E enrolled so far, A approved so far, n next semester
-    """
-    n = max(1, int(next_courses))
-    needed = math.ceil(target_rate * (_num(enrolled_so_far) + n) - _num(approved_so_far))
-    return max(0, min(n, needed)), needed <= n
+    needed = 3 * _num(target_average) - _num(t1) - _num(t2)
+    return round(max(needed, 0.0), 1), needed <= 100
 
 
 def _clean(value) -> float:

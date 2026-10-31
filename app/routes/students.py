@@ -16,27 +16,17 @@ from app.data.analytics_calc import (
     build_class_stats, calculate_student_indicators, recommend_student, report_text,
 )
 from app.data.data_loader import add_student, delete_student, get_student_by_id, load_students, update_student
-from app.data.prepare_real_data import PROGRAMMES
 from app.ml.predictor import invalidate_cache, predict_student
 
 students_bp = Blueprint("students", __name__, url_prefix="/students")
 
 PAGE_SIZE = 25
 
+COURSES = ("Mathematics", "Portuguese")
 # Number fields: (low, high, whole number?)
-NUMBER_FIELDS = {
-    "age": (14, 80, True),
-    "admission_mark": (0, 100, False), "prev_mark": (0, 100, False),
-    "s1_enrolled": (0, 30, True), "s1_approved": (0, 30, True), "s1_mark": (0, 100, False),
-    "s2_enrolled": (0, 30, True), "s2_approved": (0, 30, True), "s2_mark": (0, 100, False),
-}
-CHOICE_FIELDS = {
-    "gender": ("Male", "Female"),
-    "programme": tuple(sorted(PROGRAMMES.values())),
-    "attendance": ("Daytime", "Evening"),
-    "scholarship": ("yes", "no"), "tuition_paid": ("yes", "no"), "debtor": ("yes", "no"),
-    "outcome": ("Enrolled", "Graduate", "Dropout"),
-}
+NUMBER_FIELDS = {"t1_mark": (0, 100, False), "absences": (0, 100, True)}
+OPTIONAL_NUMBER_FIELDS = {"t2_mark": (0, 100, False), "final_mark": (0, 100, False)}
+CHOICE_FIELDS = {"course": COURSES}
 NAME_PATTERN = re.compile(r"^[\w .'\-]{1,60}$", re.UNICODE)
 
 
@@ -57,8 +47,11 @@ def parse_student_form(form) -> tuple[dict, str | None]:
             return {}, f"'{key}' must be one of: {', '.join(allowed)}."
         data[key] = value
 
-    for key, (low, high, whole) in NUMBER_FIELDS.items():
-        raw = form.get(key, "").strip()
+    for key, (low, high, whole) in {**NUMBER_FIELDS, **OPTIONAL_NUMBER_FIELDS}.items():
+        raw = str(form.get(key, "") or "").strip()
+        if raw == "" and key in OPTIONAL_NUMBER_FIELDS:
+            data[key] = None                                   # blank = not known yet
+            continue
         try:
             number = float(raw)
         except ValueError:
@@ -72,12 +65,8 @@ def parse_student_form(form) -> tuple[dict, str | None]:
         else:
             number = round(number, 1)
         data[key] = number
-
-    for sem in ("s1", "s2"):
-        if data[f"{sem}_approved"] > data[f"{sem}_enrolled"]:
-            return {}, f"Semester {sem[1]}: courses passed cannot exceed courses taken."
-        if data[f"{sem}_approved"] == 0 and data[f"{sem}_mark"] > 0:
-            return {}, f"Semester {sem[1]}: the mark must be 0 when no course was passed."
+    if data["t2_mark"] is None and data["final_mark"] is not None:
+        return {}, "A final mark needs a term 2 mark first."
     return data, None
 
 
@@ -86,19 +75,19 @@ def parse_student_form(form) -> tuple[dict, str | None]:
 def student_list():
     df = load_students()
     q = request.args.get("q", "").strip().lower()[:60]
-    programme = request.args.get("programme", "")
+    course = request.args.get("course", "")
     status = request.args.get("status", "")
 
     if not df.empty:
         if q:
             haystack = df["name"].astype(str).str.lower() + " " + df["student_id"].astype(str)
             df = df[haystack.str.contains(q, regex=False)]
-        if programme in CHOICE_FIELDS["programme"]:
-            df = df[df["programme"] == programme]
+        if course in COURSES:
+            df = df[df["course"] == course]
         if status == "at_risk":
             df = df[df["at_risk"] == 1]
-        elif status in ("Graduate", "Enrolled", "Dropout"):
-            df = df[df["outcome"] == status]
+        elif status in ("Pass", "Fail", "In progress"):
+            df = df[df["result"] == status]
 
     total = len(df)
     pages = max(1, -(-total // PAGE_SIZE))
@@ -109,8 +98,8 @@ def student_list():
     chunk = df.iloc[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
     return render_template(
         "students.html", students=chunk.to_dict("records") if total else [], total=total, page=page, pages=pages,
-        q=request.args.get("q", "").strip()[:60], programme=programme, status=status,
-        programmes=CHOICE_FIELDS["programme"],
+        q=request.args.get("q", "").strip()[:60], course=course, status=status,
+        courses=COURSES,
     )
 
 
@@ -134,10 +123,9 @@ def _report_context(student, args):
     class_stats = build_class_stats(df) if not df.empty else {}
     try:
         target = float(args.get("target")) if args.get("target") else None
-        courses = int(args.get("courses")) if args.get("courses") else None
     except ValueError:
-        target, courses = None, None
-    indicators = calculate_student_indicators(student, class_stats, target_cgpa=target, next_courses=courses)
+        target = None
+    indicators = calculate_student_indicators(student, class_stats, target_average=target)
     ml = predict_student(student)
     ml = None if "error" in ml else ml
     suggestions = recommend_student(student, class_stats, indicators, ml)
@@ -161,7 +149,7 @@ def student_detail(student_id):
     student = _student_or_404(student_id)
     log_event("student_viewed", f"id={student_id}")
     return render_template("student_detail.html", **_report_context(student, request.args),
-                           programmes=CHOICE_FIELDS["programme"])
+                           courses=COURSES)
 
 
 @students_bp.route("/<int:student_id>/report")

@@ -1,4 +1,5 @@
-> **Outdated:** this page describes the earlier secondary-school model (UCI student-performance data). The system now uses the dropout dataset and the process in [09_model_selection.md](09_model_selection.md).
+> **Possibly out of date:** this page was written for an earlier version of the project. For the current data, model selection and results see the [README](../README.md) and [09_model_selection.md](09_model_selection.md).
+
 
 > **Note:** this document was written for an earlier version of the project that used generated sample data. The application now uses the real UCI Student Performance dataset; see the main [README](../README.md) for current data, results and deployment steps. Figures and charts below may be out of date.
 

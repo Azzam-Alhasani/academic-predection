@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Risk Calculator{% endblock %}
-{% block page_title %}Withdrawal Risk Calculator{% endblock %}
+{% block page_title %}Course Risk Calculator{% endblock %}
 
 {% block content %}
 {% macro pm(m, pct=false) %}{% if m.mean is none %}n/a{% elif pct %}{{ '%.1f'|format(m.mean * 100) }}%{% else %}{{ '%.3f'|format(m.mean) }}{% endif %}{% endmacro %}
 <div class="row g-4 mt-1">
   <div class="col-12"><div class="alert alert-secondary small mb-0">
     <i class="fa-solid fa-circle-info me-1"></i>
-    Type in a student's results to get an <strong>early-warning estimate</strong> of withdrawal risk, plus the calculations and suggestions.
+    Type in a student's results to get an <strong>early-warning estimate</strong> of the chance of failing the course, plus the calculations and suggestions.
     Nothing you type is stored. Accuracy figures below come from the
-    <a href="{{ url_for('predictions.model_selection') }}">model-selection study</a> (cross-validated on {{ study.meta.n_students if study else 'the' }} real students).
+    <a href="{{ url_for('predictions.model_selection') }}">model-selection study</a> (cross-validated on {{ study.meta.n_students if study else 'the' }} real course records).
   </div></div>
 
   {% if clf %}
@@ -18,8 +18,8 @@
   <div class="col-md-6"><div class="card h-100"><div class="card-body">
     <div class="small text-muted">{{ spec.label }}</div>
     <div class="d-flex align-items-baseline gap-2"><span class="stat-value">{{ pm(sel.metrics.accuracy, true) }}</span><span class="text-muted">accuracy</span>
-      <span class="small text-muted ms-2">(always guessing "stays": {{ pm(base.metrics.accuracy, true) }})</span></div>
-    <div class="small mt-1">ROC-AUC {{ pm(sel.metrics.roc_auc) }} · catches {{ pm(sel.metrics.recall, true) }} of students who later withdrew · {{ b.selected_label }}</div>
+      <span class="small text-muted ms-2">(always guessing "passes": {{ pm(base.metrics.accuracy, true) }})</span></div>
+    <div class="small mt-1">ROC-AUC {{ pm(sel.metrics.roc_auc) }} · catches {{ pm(sel.metrics.recall, true) }} of those who later failed · {{ b.selected_label }}</div>
   </div></div></div>
   {% endfor %}
   {% endif %}
@@ -28,7 +28,7 @@
     {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
     <form method="POST">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      {% set f = form %}{% set programmes = choices.programme %}{% set with_name = false %}{% set with_outcome = false %}
+      {% set f = form %}{% set courses = choices.course %}{% set with_name = false %}{% set with_final = false %}
       {% include "_student_fields.html" %}
       <button class="btn btn-primary mt-3 w-100"><i class="fa-solid fa-brain me-1"></i>Calculate risk</button>
     </form></div></div></div>

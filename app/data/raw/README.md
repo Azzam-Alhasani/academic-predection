@@ -1,14 +1,23 @@
 # Raw data
 
-`uci_dropout_success.csv` is the UCI Machine Learning Repository dataset
-**"Predict Students' Dropout and Academic Success"** (dataset 697).
+`student-mat.csv` (395 students, Mathematics) and `student-por.csv` (649 students, Portuguese language)
 
-- 4,424 students from several undergraduate degrees at the Polytechnic Institute of Portalegre (Portugal)
-- Authors: M.V. Martins, D. Tolledo, J. Machado, L.M.T. Baptista, V. Realinho (2021);
-  paper: V. Realinho, J. Machado, L. Baptista, M.V. Martins, *Predicting Student Dropout and
-  Academic Success*, Data 7(11):146, 2022
-- Licence: CC BY 4.0 - https://archive.ics.uci.edu/dataset/697
-- The file is unchanged except for removing the byte-order mark and stray whitespace in column names.
-  Two independent GitHub copies were compared and are identical.
+**Source:** P. Cortez and A. Silva, *Using Data Mining to Predict Secondary School Student Performance*,
+in A. Brito and J. Teixeira (Eds.), Proceedings of 5th FUture BUsiness TEChnology Conference (FUBUTEC 2008),
+pp. 5-12, Porto, Portugal, April 2008. UCI Machine Learning Repository, dataset 320.
+Licence: CC BY 4.0.
 
-`python app/data/prepare_real_data.py` turns it into the app's `sample_students.csv`.
+Two Portuguese secondary schools, school year 2005-2006. The files hold many survey questions
+(family, free time, alcohol ...). **This project deliberately uses only four things:**
+
+| Used | Original column | Meaning |
+|---|---|---|
+| Term 1 mark | `G1` | first-period grade, 0-20 |
+| Term 2 mark | `G2` | second-period grade, 0-20 |
+| Absences | `absences` | number of school absences |
+| Final mark | `G3` | final grade, 0-20 (the thing to predict) |
+
+plus the course (Mathematics / Portuguese). Everything else is ignored. `age`, `sex`, `school`, `address`,
+`famsize`, `Pstatus`, `Medu`, `Fedu`, `Mjob`, `Fjob`, `reason`, `nursery` and `internet` are used only to
+recognise that a student appears in both files (382 students do), so that both rows are kept on the same
+side of every train/test split.
