@@ -1,169 +1,49 @@
 {% extends "base.html" %}
 {% block title %}{{ student.name }}{% endblock %}
-{% block page_title %}Student Profile{% endblock %}
+{% block page_title %}{{ student.name }}{% endblock %}
 
 {% block content %}
-{% set studytime_labels = {1: 'under 2 h', 2: '2-5 h', 3: '5-10 h', 4: 'over 10 h'} %}
-<div class="row g-4 mt-1">
-
-  <!-- ── Profile Header ───────────────────────────────────── -->
-  <div class="col-12">
-    <div class="card profile-header-card">
-      <div class="card-body d-flex align-items-center gap-4 flex-wrap">
-        <div class="avatar-circle">{{ student.name[-2:] }}</div>
-        <div class="flex-grow-1">
-          <h4 class="mb-1 fw-bold">{{ student.name }}</h4>
-          <div class="d-flex gap-3 flex-wrap text-muted small">
-            <span><i class="fa-solid fa-id-badge me-1"></i>ID {{ student.student_id }}</span>
-            <span><i class="fa-solid fa-book me-1"></i>{{ student.subject }}</span>
-            <span><i class="fa-solid fa-venus-mars me-1"></i>{{ student.gender }}</span>
-            <span><i class="fa-solid fa-cake-candles me-1"></i>Age {{ student.age | int }}</span>
-          </div>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-          <span class="badge fs-5 px-3 py-2 grade-badge grade-{{ student.grade_letter }}">Grade {{ student.grade_letter }}</span>
-          {% if student.pass_fail == 1 %}
-            <span class="badge bg-success fs-6 px-3 py-2"><i class="fa-solid fa-circle-check me-1"></i>Pass</span>
-          {% else %}
-            <span class="badge bg-danger fs-6 px-3 py-2"><i class="fa-solid fa-circle-xmark me-1"></i>Fail</span>
-          {% endif %}
-          {% if student.at_risk == 1 %}
-            <span class="badge bg-warning text-dark fs-6 px-3 py-2"><i class="fa-solid fa-triangle-exclamation me-1"></i>At-Risk</span>
-          {% endif %}
-        </div>
-        <div class="ms-auto d-flex gap-2">
-          {% if current_user %}
-          <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editModal">
-            <i class="fa-solid fa-pen me-1"></i>Edit
-          </button>
-          {% endif %}
-          <a href="{{ url_for('students.student_list') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fa-solid fa-arrow-left me-1"></i>Back
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Grade stats ───────────────────────────────────────── -->
-  <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
-    <div class="stat-value">{{ indicators.g1 | int }}</div><div class="stat-label">G1 (period 1)</div></div></div></div>
-  <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
-    <div class="stat-value">{{ indicators.g2 | int }}</div><div class="stat-label">G2 (period 2)</div></div></div></div>
-  <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
-    <div class="stat-value text-primary">{{ indicators.g3 | int }}</div><div class="stat-label">G3 (final)</div></div></div></div>
-  <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
-    <div class="stat-value {{ 'text-success' if indicators.progress > 0 else 'text-danger' if indicators.progress < 0 else '' }}">
-      {{ '%+.0f' | format(indicators.progress) }}</div>
-    <div class="stat-label">Change G2 &rarr; G3 ({{ indicators.trend }})</div></div></div></div>
-
-  <!-- ── Grade chart ───────────────────────────────────────── -->
-  <div class="col-12 col-lg-6">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-chart-line text-info"></i><span class="fw-semibold">Grades across the periods</span>
-      </div>
-      <div class="card-body chart-wrapper"><canvas id="gradeChart"></canvas></div>
-    </div>
-  </div>
-
-  <!-- ── Details ───────────────────────────────────────────── -->
-  <div class="col-12 col-lg-6">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-circle-info text-primary"></i><span class="fw-semibold">Details</span>
-      </div>
-      <div class="card-body">
-        <table class="table table-sm mb-0">
-          <tbody>
-            <tr><th class="text-muted fw-normal">Weekly study time</th><td>{{ studytime_labels.get(student.studytime | int, '-') }}</td></tr>
-            <tr><th class="text-muted fw-normal">Past class failures</th><td>{{ student.failures | int }}</td></tr>
-            <tr><th class="text-muted fw-normal">School absences</th><td>{{ student.absences | int }}</td></tr>
-            <tr><th class="text-muted fw-normal">Wants higher education</th><td>{{ (student.higher or '-') | capitalize }}</td></tr>
-            <tr><th class="text-muted fw-normal">Internet at home</th><td>{{ (student.internet or '-') | capitalize }}</td></tr>
-            <tr><th class="text-muted fw-normal">Final grade vs class average</th>
-                <td>{{ '%+.1f' | format(indicators.vs_class) }} points</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Risk factors + recommendations ────────────────────── -->
-  <div class="col-12 col-lg-5">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-triangle-exclamation text-warning"></i><span class="fw-semibold">Risk Factors</span>
-      </div>
-      <div class="card-body">
-        {% if indicators.risk_factors %}
-          <ul class="mb-0">{% for f in indicators.risk_factors %}<li>{{ f }}</li>{% endfor %}</ul>
-        {% else %}
-          <p class="text-muted mb-0"><i class="fa-solid fa-circle-check text-success me-1"></i>No risk factors found in the record.</p>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  <div class="col-12 col-lg-7">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-lightbulb text-warning"></i><span class="fw-semibold">Recommendations</span>
-      </div>
-      <div class="card-body">
-        {% if recommendations %}
-          <ul class="mb-0">{% for tip in recommendations %}<li class="mb-2">{{ tip }}</li>{% endfor %}</ul>
-        {% else %}
-          <p class="text-muted mb-0">Nothing to flag. Keep up the good work.</p>
-        {% endif %}
-      </div>
-    </div>
+<div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+  <div><span class="text-muted">{{ student.programme }} · {{ student.gender }} · age {{ student.age }} · {{ student.attendance }}</span>
+    <span class="badge bg-secondary ms-2">{{ student.outcome }}</span></div>
+  <div class="d-flex gap-2 no-print">
+    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('students.student_report', student_id=student.student_id, **request.args) }}"><i class="fa-solid fa-print me-1"></i>Printable report</a>
+    {% if is_staff %}<a class="btn btn-sm btn-outline-secondary" href="{{ url_for('students.student_list') }}">Back to list</a>{% endif %}
   </div>
 </div>
 
-{% if current_user %}
-<!-- ── Edit Modal ─────────────────────────────────────────── -->
-<div class="modal fade" id="editModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="fa-solid fa-pen me-2 text-primary"></i>Edit {{ student.name }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form method="POST" action="{{ url_for('students.student_edit', student_id=student.student_id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="modal-body">
-          {% set form_student = student %}
-          {% include "_student_fields.html" %}
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save changes</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+<div class="mt-3">{% include "_report_body.html" %}</div>
+
+{% if indicators.plan %}
+<div class="card mt-4 no-print"><div class="card-header">Goal planner</div><div class="card-body">
+  <form method="GET" class="row g-2 align-items-end">
+    <div class="col-6 col-md-3"><label class="form-label small">Target CGPA</label>
+      <input type="number" name="target" step="0.05" min="0" max="4" class="form-control form-control-sm" value="{{ '%.2f'|format(indicators.plan.target) }}" /></div>
+    <div class="col-6 col-md-3"><label class="form-label small">Courses next semester</label>
+      <input type="number" name="courses" min="1" max="12" class="form-control form-control-sm" value="{{ indicators.plan.courses }}" /></div>
+    <div class="col-md-3"><button class="btn btn-sm btn-primary">Recalculate</button></div>
+  </form>
+  <p class="small text-muted mt-2 mb-0">Change the target to see the GPA and marks you would need. The working appears in "Calculations" above.</p>
+</div></div>
 {% endif %}
-{% endblock %}
 
-{% block scripts %}
-<script>
-new Chart(document.getElementById('gradeChart'), {
-  type: 'line',
-  data: {
-    labels: ['G1 (period 1)', 'G2 (period 2)', 'G3 (final)'],
-    datasets: [{
-      label: 'Student grade',
-      data: [{{ indicators.g1 }}, {{ indicators.g2 }}, {{ indicators.g3 }}],
-      borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,0.15)',
-      fill: true, tension: 0.3, pointRadius: 5,
-    }, {
-      label: 'Pass mark (10)',
-      data: [10, 10, 10],
-      borderColor: '#dc3545', borderDash: [6, 6], pointRadius: 0, fill: false,
-    }]
-  },
-  options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 20 } } }
-});
-</script>
+<div class="card mt-4 no-print"><div class="card-header d-flex justify-content-between"><span>Text version (copy into an email or message)</span>
+  <button class="btn btn-sm btn-outline-secondary" data-copy="#reportText"><i class="fa-regular fa-copy me-1"></i>Copy</button></div>
+  <div class="card-body"><textarea id="reportText" class="form-control small" rows="8" readonly>{{ text_report }}</textarea></div></div>
+
+{% if is_staff %}
+<div class="card mt-4 no-print"><div class="card-header">Edit record</div><div class="card-body">
+  <form method="POST" action="{{ url_for('students.student_edit', student_id=student.student_id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    {% set f = student %}{% set with_name = true %}{% set with_outcome = true %}
+    {% include "_student_fields.html" %}
+    <button class="btn btn-primary mt-3">Save changes</button>
+  </form>
+  {% if is_admin %}
+  <form method="POST" action="{{ url_for('students.student_delete', student_id=student.student_id) }}" class="mt-3" data-confirm="Delete this student record permanently?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <button class="btn btn-sm btn-outline-danger">Delete student</button>
+  </form>{% endif %}
+</div></div>
+{% endif %}
 {% endblock %}

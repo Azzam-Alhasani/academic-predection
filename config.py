@@ -1,5 +1,6 @@
 import os
 import secrets
+from datetime import timedelta
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -18,7 +19,11 @@ class Config:
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = False
 
-    # Login throttling (per client IP): max failed attempts inside the window.
+    # Sessions end after 30 minutes without activity; form posts are capped at 64 KB.
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
+    MAX_CONTENT_LENGTH = 64 * 1024
+
+    # Login throttling (per client IP and per username): max failed attempts inside the window.
     LOGIN_MAX_ATTEMPTS = 5
     LOGIN_WINDOW_SECONDS = 300
 

@@ -38,11 +38,7 @@ if [ ! -f "app/data/sample_students.csv" ]; then
     echo "[OK] Dataset ready."
 fi
 
-# Create the admin login on first run (the password is printed once)
-if [ ! -f "app/data/users.csv" ]; then
-    echo "[INFO] Creating the admin login..."
-    python app/data/create_users.py
-fi
+# First start creates a local login (admin / admin123) and prints it; change it in the app.
 
 echo ""
 echo "============================================================"

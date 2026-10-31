@@ -1,66 +1,36 @@
-{# Shared add/edit fields. Expects `form_student` (dict) in the including template. #}
+{# Shared student fields. Expects: f (dict of current values), programmes (list), flags: with_name, with_outcome #}
+{% macro select(name, label, options, col='col-6 col-md-3') %}
+<div class="{{ col }}"><label class="form-label">{{ label }}</label>
+  <select name="{{ name }}" class="form-select">
+    {% for o in options %}<option value="{{ o }}" {{ 'selected' if f.get(name) == o }}>{{ o|capitalize if o in ['yes','no'] else o }}</option>{% endfor %}
+  </select></div>
+{% endmacro %}
+{% macro number(name, label, lo, hi, step=1, col='col-6 col-md-2') %}
+<div class="{{ col }}"><label class="form-label">{{ label }}</label>
+  <input type="number" name="{{ name }}" class="form-control" min="{{ lo }}" max="{{ hi }}" step="{{ step }}" value="{{ f.get(name) if f.get(name) is not none else 0 }}" required /></div>
+{% endmacro %}
 <div class="row g-3">
-  <div class="col-md-6">
-    <label class="form-label">Name <span class="text-muted">(optional)</span></label>
-    <input type="text" name="name" class="form-control" maxlength="60" value="{{ form_student.get('name') or '' }}" placeholder="Student label" />
-  </div>
-  <div class="col-md-3">
-    <label class="form-label">Subject</label>
-    <select name="subject" class="form-select">
-      {% for v in ['Math', 'Portuguese'] %}<option value="{{ v }}" {{ 'selected' if form_student.get('subject') == v }}>{{ v }}</option>{% endfor %}
-    </select>
-  </div>
-  <div class="col-md-3">
-    <label class="form-label">Gender</label>
-    <select name="gender" class="form-select">
-      {% for v in ['Female', 'Male'] %}<option value="{{ v }}" {{ 'selected' if form_student.get('gender') == v }}>{{ v }}</option>{% endfor %}
-    </select>
-  </div>
+  {% if with_name %}
+  <div class="col-md-6"><label class="form-label">Name <span class="text-muted">(optional label)</span></label>
+    <input type="text" name="name" class="form-control" maxlength="60" value="{{ f.get('name') or '' }}" placeholder="Student label" /></div>
+  {% endif %}
+  {{ select('programme', 'Programme', programmes, 'col-md-6') }}
+  {{ select('gender', 'Gender', ['Female', 'Male']) }}
+  {{ select('attendance', 'Attendance', ['Daytime', 'Evening']) }}
+  {{ number('age', 'Age at enrolment', 14, 80) }}
+  {{ number('admission_mark', 'Admission mark (%)', 0, 100, 0.1) }}
+  {{ number('prev_mark', 'Previous qualification (%)', 0, 100, 0.1) }}
+  {{ select('scholarship', 'Scholarship', ['no', 'yes']) }}
+  {{ select('tuition_paid', 'Tuition paid up to date', ['yes', 'no']) }}
+  {{ select('debtor', 'Outstanding debt', ['no', 'yes']) }}
+  {% if with_outcome %}{{ select('outcome', 'Outcome', ['Enrolled', 'Graduate', 'Dropout']) }}{% endif %}
 
-  <div class="col-6 col-md-3">
-    <label class="form-label">Age</label>
-    <input type="number" name="age" class="form-control" min="10" max="30" step="1" value="{{ form_student.get('age') | int }}" required />
-  </div>
-  <div class="col-6 col-md-3">
-    <label class="form-label">Study time</label>
-    <select name="studytime" class="form-select">
-      {% for v, label in [(1, 'under 2 h / week'), (2, '2-5 h / week'), (3, '5-10 h / week'), (4, 'over 10 h / week')] %}
-      <option value="{{ v }}" {{ 'selected' if form_student.get('studytime') | int == v }}>{{ label }}</option>{% endfor %}
-    </select>
-  </div>
-  <div class="col-6 col-md-3">
-    <label class="form-label">Past failures (0-4)</label>
-    <input type="number" name="failures" class="form-control" min="0" max="4" step="1" value="{{ form_student.get('failures') | int }}" required />
-  </div>
-  <div class="col-6 col-md-3">
-    <label class="form-label">Absences</label>
-    <input type="number" name="absences" class="form-control" min="0" max="100" step="1" value="{{ form_student.get('absences') | int }}" required />
-  </div>
-
-  <div class="col-6 col-md-3">
-    <label class="form-label">Wants higher education</label>
-    <select name="higher" class="form-select">
-      {% for v in ['yes', 'no'] %}<option value="{{ v }}" {{ 'selected' if form_student.get('higher') == v }}>{{ v | capitalize }}</option>{% endfor %}
-    </select>
-  </div>
-  <div class="col-6 col-md-3">
-    <label class="form-label">Internet at home</label>
-    <select name="internet" class="form-select">
-      {% for v in ['yes', 'no'] %}<option value="{{ v }}" {{ 'selected' if form_student.get('internet') == v }}>{{ v | capitalize }}</option>{% endfor %}
-    </select>
-  </div>
-
-  <div class="col-12"><hr class="my-1" /><p class="form-label mb-2 fw-semibold">Grades (0-20)</p></div>
-  <div class="col-4">
-    <label class="form-label">G1 (period 1)</label>
-    <input type="number" name="G1" class="form-control" min="0" max="20" step="1" value="{{ form_student.get('G1') | int }}" required />
-  </div>
-  <div class="col-4">
-    <label class="form-label">G2 (period 2)</label>
-    <input type="number" name="G2" class="form-control" min="0" max="20" step="1" value="{{ form_student.get('G2') | int }}" required />
-  </div>
-  <div class="col-4">
-    <label class="form-label">G3 (final)</label>
-    <input type="number" name="G3" class="form-control" min="0" max="20" step="1" value="{{ form_student.get('G3') | int }}" required />
-  </div>
+  <div class="col-12"><hr class="my-1" /><div class="small text-muted">Semester 1</div></div>
+  {{ number('s1_enrolled', 'Courses taken', 0, 30) }}
+  {{ number('s1_approved', 'Courses passed', 0, 30) }}
+  {{ number('s1_mark', 'Average mark of passed courses (%)', 0, 100, 0.1, 'col-6 col-md-3') }}
+  <div class="col-12"><div class="small text-muted">Semester 2 <span class="text-muted">(leave all at 0 if it has not happened yet)</span></div></div>
+  {{ number('s2_enrolled', 'Courses taken', 0, 30) }}
+  {{ number('s2_approved', 'Courses passed', 0, 30) }}
+  {{ number('s2_mark', 'Average mark of passed courses (%)', 0, 100, 0.1, 'col-6 col-md-3') }}
 </div>

@@ -1,206 +1,46 @@
-﻿{% extends "base.html" %}
-{% block title %}Predictions{% endblock %}
-{% block page_title %}ML Predictions{% endblock %}
+{% extends "base.html" %}
+{% block title %}Risk Calculator{% endblock %}
+{% block page_title %}Withdrawal Risk Calculator{% endblock %}
 
 {% block content %}
-{% set clf = metrics.values() | selectattr('type', 'equalto', 'classification') | list %}
+{% macro pm(m, pct=false) %}{% if m.mean is none %}n/a{% elif pct %}{{ '%.1f'|format(m.mean * 100) }}%{% else %}{{ '%.3f'|format(m.mean) }}{% endif %}{% endmacro %}
 <div class="row g-4 mt-1">
+  <div class="col-12"><div class="alert alert-secondary small mb-0">
+    <i class="fa-solid fa-circle-info me-1"></i>
+    Type in a student's results to get an <strong>early-warning estimate</strong> of withdrawal risk, plus the calculations and suggestions.
+    Nothing you type is stored. Accuracy figures below come from the
+    <a href="{{ url_for('predictions.model_selection') }}">model-selection study</a> (cross-validated on {{ study.meta.n_students if study else 'the' }} real students).
+  </div></div>
 
-  <div class="col-12">
-    <div class="alert alert-info mb-0 small">
-      <i class="fa-solid fa-circle-info me-1"></i>
-      <strong>How it works:</strong> the models predict the <em>final</em> result (pass = G3 of 10 or more) from the
-      first two period grades (G1, G2) plus study time, absences, past failures and a few background fields.
-      Scores below come from 5-fold cross-validation on {{ training_size }} real students, where every student is
-      tested by a model that never saw them (or their record in the other subject).
-      {% if clf %}Always guessing &ldquo;Pass&rdquo; would already be right {{ (clf[0].baseline * 100) | round(1) }}% of the time, so that is the number to beat.{% endif %}
-    </div>
-  </div>
+  {% if clf %}
+  {% for scen, spec in scenarios.items() %}{% set b = clf[scen] %}{% set sel = (b.tuned|selectattr('key', 'equalto', b.selected)|list)[0] %}
+  {% set base = (b.candidates|selectattr('key', 'equalto', 'majority')|list)[0] %}
+  <div class="col-md-6"><div class="card h-100"><div class="card-body">
+    <div class="small text-muted">{{ spec.label }}</div>
+    <div class="d-flex align-items-baseline gap-2"><span class="stat-value">{{ pm(sel.metrics.accuracy, true) }}</span><span class="text-muted">accuracy</span>
+      <span class="small text-muted ms-2">(always guessing "stays": {{ pm(base.metrics.accuracy, true) }})</span></div>
+    <div class="small mt-1">ROC-AUC {{ pm(sel.metrics.roc_auc) }} · catches {{ pm(sel.metrics.recall, true) }} of students who later withdrew · {{ b.selected_label }}</div>
+  </div></div></div>
+  {% endfor %}
+  {% endif %}
 
-  <!-- ── Input form ───────────────────────────────────────── -->
-  <div class="col-12 col-lg-4">
-    <div class="card sticky-col">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-wand-magic-sparkles text-primary"></i><span class="fw-semibold">Predict a student</span>
-      </div>
-      <div class="card-body">
-        <ul class="nav nav-pills nav-fill mb-3">
-          <li class="nav-item"><button type="button" class="nav-link active" id="tab-student" onclick="switchMode('student')">Existing</button></li>
-          <li class="nav-item"><button type="button" class="nav-link" id="tab-custom" onclick="switchMode('custom')">Hypothetical</button></li>
-        </ul>
+  <div class="col-lg-5"><div class="card"><div class="card-header">Student details</div><div class="card-body">
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      {% set f = form %}{% set programmes = choices.programme %}{% set with_name = false %}{% set with_outcome = false %}
+      {% include "_student_fields.html" %}
+      <button class="btn btn-primary mt-3 w-100"><i class="fa-solid fa-brain me-1"></i>Calculate risk</button>
+    </form></div></div></div>
 
-        <form method="POST" id="predForm">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          <input type="hidden" name="mode" id="modeField" value="student" />
-
-          <div id="panelStudent">
-            <label class="form-label">Choose a student</label>
-            <select name="student_id" id="studentIdField" class="form-select">
-              <option value="">Select…</option>
-              {% for s in students %}
-              <option value="{{ s.student_id }}" {{ 'selected' if selected_student and selected_student.student_id == s.student_id }}>
-                #{{ s.student_id }} · {{ s.subject }}
-              </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div id="panelCustom" style="display:none;">
-            <div class="row g-2">
-              <div class="col-6"><label class="form-label">Subject</label>
-                <select name="subject" class="form-select">
-                  {% for v in choices.subject %}<option {{ 'selected' if form_data.subject == v }}>{{ v }}</option>{% endfor %}</select></div>
-              <div class="col-6"><label class="form-label">Gender</label>
-                <select name="gender" class="form-select">
-                  {% for v in choices.gender %}<option {{ 'selected' if form_data.gender == v }}>{{ v }}</option>{% endfor %}</select></div>
-              <div class="col-6"><label class="form-label">G1 (0-20)</label>
-                <input type="number" name="G1" class="form-control" min="0" max="20" step="1" value="{{ form_data.G1 }}"></div>
-              <div class="col-6"><label class="form-label">G2 (0-20)</label>
-                <input type="number" name="G2" class="form-control" min="0" max="20" step="1" value="{{ form_data.G2 }}"></div>
-              <div class="col-6"><label class="form-label">Absences</label>
-                <input type="number" name="absences" class="form-control" min="0" max="100" step="1" value="{{ form_data.absences }}"></div>
-              <div class="col-6"><label class="form-label">Past failures</label>
-                <input type="number" name="failures" class="form-control" min="0" max="4" step="1" value="{{ form_data.failures }}"></div>
-              <div class="col-6"><label class="form-label">Study time</label>
-                <select name="studytime" class="form-select">
-                  {% for v, label in [(1, '< 2 h'), (2, '2-5 h'), (3, '5-10 h'), (4, '> 10 h')] %}
-                  <option value="{{ v }}" {{ 'selected' if form_data.studytime | int == v }}>{{ label }}</option>{% endfor %}</select></div>
-              <div class="col-6"><label class="form-label">Age</label>
-                <input type="number" name="age" class="form-control" min="10" max="30" step="1" value="{{ form_data.age }}"></div>
-              <div class="col-6"><label class="form-label">Higher education</label>
-                <select name="higher" class="form-select">
-                  {% for v in choices.higher %}<option {{ 'selected' if form_data.higher == v }}>{{ v }}</option>{% endfor %}</select></div>
-              <div class="col-6"><label class="form-label">Internet</label>
-                <select name="internet" class="form-select">
-                  {% for v in choices.internet %}<option {{ 'selected' if form_data.internet == v }}>{{ v }}</option>{% endfor %}</select></div>
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary w-100 mt-3"><i class="fa-solid fa-play me-1"></i>Run all models</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Results + metrics ────────────────────────────────── -->
-  <div class="col-12 col-lg-8">
-
-    {% if prediction_results %}
-    <div class="mb-2 text-muted small">
-      {% if selected_student %}Results for <strong>{{ selected_student.name }}</strong> ({{ selected_student.subject }}) &middot;
-        actual final grade: <strong>{{ selected_student.G3 | int }}</strong> ({{ 'Pass' if selected_student.pass_fail == 1 else 'Fail' }})
-      {% else %}Results for the hypothetical student{% endif %}
-    </div>
-    <div class="row g-3 mb-4">
-      {% for key, res in prediction_results.items() %}
-      <div class="col-12 col-md-6">
-        <div class="card prediction-card h-100 {{ 'border-success' if res.prediction == 'Pass' else 'border-danger' if res.prediction == 'Fail' else '' }}">
-          <div class="card-body text-center">
-            <div class="text-muted small mb-2">{{ res.name }}</div>
-            {% if res.type == 'classification' %}
-              <div class="display-6 fw-bold {{ 'text-success' if res.prediction == 'Pass' else 'text-danger' }}">{{ res.prediction }}</div>
-              <div class="text-muted small">chance of passing: {{ res.p_pass }}%</div>
-            {% else %}
-              <div class="display-6 fw-bold text-primary">{{ res.predicted_score }}<small class="fs-6 text-muted"> /20</small></div>
-              <div class="text-muted small">Predicted final grade</div>
-              <div class="mt-2"><span class="badge grade-badge grade-{{ res.grade }} fs-6">Grade {{ res.grade }}</span></div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
+  <div class="col-lg-7">
+    {% if result and report %}
+      {% set student = report.student %}{% set indicators = report.indicators %}{% set suggestions = report.suggestions %}{% set ml = result %}
+      {% include "_report_body.html" %}
+    {% else %}
+      <div class="card h-100"><div class="card-body text-muted d-flex align-items-center justify-content-center" style="min-height:240px">
+        Enter results and press <strong>&nbsp;Calculate risk</strong> to see the estimate, suggestions and formulas.</div></div>
     {% endif %}
-
-    <div class="card">
-      <div class="card-header d-flex align-items-center gap-2">
-        <i class="fa-solid fa-microscope text-info"></i><span class="fw-semibold">Model Evaluation (cross-validated)</span>
-        <span class="badge bg-secondary ms-auto">{{ training_size }} students</span>
-      </div>
-      <div class="card-body">
-        {% if metrics %}
-        <div class="row g-3">
-          {% for key, m in metrics.items() %}
-          <div class="col-12 col-md-6">
-            <div class="card bg-body-secondary h-100"><div class="card-body">
-              <h6 class="fw-bold mb-2">
-                {% if m.type == 'regression' %}<i class="fa-solid fa-chart-line text-primary me-1"></i>{% else %}<i class="fa-solid fa-sitemap text-info me-1"></i>{% endif %}
-                {{ m.name }}
-              </h6>
-              <p class="text-muted small mb-3">{{ m.description }}</p>
-              {% if m.type == 'regression' %}
-                <div class="d-flex gap-3 flex-wrap">
-                  <div class="metric-chip"><div class="metric-chip-label">RMSE (grade points)</div><div class="metric-chip-value text-warning">{{ m.rmse }}</div></div>
-                  <div class="metric-chip"><div class="metric-chip-label">R&sup2;</div><div class="metric-chip-value text-success">{{ m.r2 }}</div></div>
-                </div>
-              {% else %}
-                <div class="d-flex gap-2 flex-wrap">
-                  <div class="metric-chip"><div class="metric-chip-label">Accuracy</div><div class="metric-chip-value text-success">{{ (m.accuracy * 100) | round(1) }}%</div></div>
-                  <div class="metric-chip"><div class="metric-chip-label">Precision</div><div class="metric-chip-value text-info">{{ (m.precision * 100) | round(1) }}%</div></div>
-                  <div class="metric-chip"><div class="metric-chip-label">Recall</div><div class="metric-chip-value text-warning">{{ (m.recall * 100) | round(1) }}%</div></div>
-                  <div class="metric-chip"><div class="metric-chip-label">F1</div><div class="metric-chip-value text-primary">{{ (m.f1 * 100) | round(1) }}%</div></div>
-                  {% if m.roc_auc is not none %}
-                  <div class="metric-chip"><div class="metric-chip-label">ROC-AUC</div><div class="metric-chip-value text-secondary">{{ (m.roc_auc * 100) | round(1) }}%</div></div>
-                  {% endif %}
-                </div>
-                <table class="table table-sm text-center mt-3 mb-0 small">
-                  <thead><tr><th></th><th>Pred. Fail</th><th>Pred. Pass</th></tr></thead>
-                  <tbody>
-                    <tr><th class="text-start">Actual Fail</th><td>{{ m.confusion_matrix[0][0] }}</td><td>{{ m.confusion_matrix[0][1] }}</td></tr>
-                    <tr><th class="text-start">Actual Pass</th><td>{{ m.confusion_matrix[1][0] }}</td><td>{{ m.confusion_matrix[1][1] }}</td></tr>
-                  </tbody>
-                </table>
-              {% endif %}
-            </div></div>
-          </div>
-          {% endfor %}
-        </div>
-
-        <div class="mt-4">
-          <h6 class="text-muted mb-2">Classification accuracy vs the &ldquo;always Pass&rdquo; baseline</h6>
-          <div class="chart-wrapper" style="max-height:240px;"><canvas id="modelCompareChart"></canvas></div>
-        </div>
-        {% else %}
-        <div class="text-center text-muted py-4">
-          <i class="fa-solid fa-circle-info fa-2x mb-2"></i>
-          <p>Not enough student data to train the models.</p>
-        </div>
-        {% endif %}
-      </div>
-    </div>
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-const metricsData = {{ metrics | tojson }};
-
-function switchMode(mode) {
-  document.getElementById('tab-student').classList.toggle('active', mode === 'student');
-  document.getElementById('tab-custom').classList.toggle('active', mode === 'custom');
-  document.getElementById('panelStudent').style.display = mode === 'student' ? '' : 'none';
-  document.getElementById('panelCustom').style.display = mode === 'custom' ? '' : 'none';
-  document.getElementById('modeField').value = mode;
-  if (mode === 'custom') document.getElementById('studentIdField').value = '';
-}
-{% if prediction_results and not selected_student %}switchMode('custom');{% endif %}
-
-(function () {
-  const clf = Object.values(metricsData).filter(m => m.type === 'classification');
-  const el = document.getElementById('modelCompareChart');
-  if (!clf.length || !el) return;
-  new Chart(el, {
-    type: 'bar',
-    data: {
-      labels: clf.map(m => m.name),
-      datasets: [
-        { label: 'Accuracy %', data: clf.map(m => +(m.accuracy * 100).toFixed(1)), backgroundColor: '#198754', borderRadius: 6 },
-        { label: 'Always-Pass baseline %', data: clf.map(m => +(m.baseline * 100).toFixed(1)), backgroundColor: '#6c757d', borderRadius: 6 },
-      ]
-    },
-    options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 50, max: 100 } } }
-  });
-})();
-</script>
 {% endblock %}

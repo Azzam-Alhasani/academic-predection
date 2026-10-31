@@ -1,5 +1,7 @@
+import hmac
 import os
-from flask import session, request, abort
+
+from flask import abort, request, session
 
 
 def get_csrf_token() -> str:
@@ -19,7 +21,7 @@ def validate_csrf() -> bool:
     if not submitted:
         abort(400, description="CSRF token required.")
 
-    if submitted != stored:
+    if not hmac.compare_digest(str(submitted), str(stored)):   # constant-time comparison
         abort(400, description="CSRF token mismatch.")
 
     return True

@@ -1,15 +1,17 @@
 """
-Build the app's student dataset from the real UCI "Student Performance" data.
-
-Source: P. Cortez and A. Silva, "Using Data Mining to Predict Secondary School
-Student Performance", 2008. UCI Machine Learning Repository, licence CC BY 4.0.
-Raw files (semicolon separated) live in app/data/raw/:
-  - student-mat.csv  (395 students, Mathematics)
-  - student-por.csv  (649 students, Portuguese language)
+Build the app's student table from the real UCI "Predict Students' Dropout and
+Academic Success" data (4,424 university students, see raw/README.md).
 
 Run:  python app/data/prepare_real_data.py
-Writes app/data/sample_students.csv (the pristine copy that the app copies to
-students.csv on first start).
+Writes app/data/sample_students.csv, the pristine copy that the app copies to
+students.csv on first start.
+
+Conversions (so the numbers read like a UTAS transcript):
+  * semester average grade 0-20  ->  percentage mark 0-100   (x 5)
+  * admission / previous-qualification grade 0-200  ->  0-100 (/ 2)
+  * "curricular units" are called courses
+  * 0/1 flags become no/yes; Gender 1 = Male, 0 = Female (as documented by the authors)
+Letters, GPA, CGPA and academic standing are computed from the marks by app/grading.py.
 """
 
 import os
@@ -17,48 +19,60 @@ import os
 import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-RAW_DIR = os.path.join(HERE, "raw")
+RAW_FILE = os.path.join(HERE, "raw", "uci_dropout_success.csv")
 OUT_FILE = os.path.join(HERE, "sample_students.csv")
 
-PASS_MARK = 10  # final grade G3 is on a 0-20 scale; 10 or more is a pass
+# Course codes as documented in the dataset paper.
+PROGRAMMES = {
+    33: "Biofuel Production Technologies", 171: "Animation and Multimedia Design",
+    8014: "Social Service (evening)", 9003: "Agronomy", 9070: "Communication Design",
+    9085: "Veterinary Nursing", 9119: "Informatics Engineering", 9130: "Equinculture",
+    9147: "Management", 9238: "Social Service", 9254: "Tourism", 9500: "Nursing",
+    9556: "Oral Hygiene", 9670: "Advertising and Marketing Management",
+    9773: "Journalism and Communication", 9853: "Basic Education", 9991: "Management (evening)",
+}
 
 COLUMNS = [
-    "student_id", "name", "subject", "school", "gender", "age", "address",
-    "famsize", "Pstatus", "Medu", "Fedu", "Mjob", "Fjob", "reason", "guardian",
-    "traveltime", "studytime", "failures", "schoolsup", "famsup", "paid",
-    "activities", "nursery", "higher", "internet", "romantic", "famrel",
-    "freetime", "goout", "Dalc", "Walc", "health", "absences",
-    "G1", "G2", "G3", "pass_fail",
+    "student_id", "name", "gender", "age", "programme", "attendance", "admission_mark",
+    "prev_mark", "scholarship", "tuition_paid", "debtor",
+    "s1_enrolled", "s1_approved", "s1_mark", "s2_enrolled", "s2_approved", "s2_mark", "outcome",
 ]
 
 
-def _load(filename: str, subject: str) -> pd.DataFrame:
-    df = pd.read_csv(os.path.join(RAW_DIR, filename), sep=";", quotechar='"')
-    df["subject"] = subject
-    for col in ("G1", "G2", "G3"):
-        df[col] = pd.to_numeric(df[col].astype(str).str.strip('"'), errors="coerce")
-    return df
+def _yes_no(series: pd.Series) -> pd.Series:
+    return series.map({1: "yes", 0: "no"})
 
 
 def build() -> pd.DataFrame:
-    df = pd.concat(
-        [_load("student-mat.csv", "Math"), _load("student-por.csv", "Portuguese")],
-        ignore_index=True,
-    )
-    df = df.dropna(subset=["G1", "G2", "G3"]).reset_index(drop=True)
-    for col in ("G1", "G2", "G3"):
-        df[col] = df[col].astype(int)
-
-    df["gender"] = df["sex"].map({"F": "Female", "M": "Male"})
-    df["student_id"] = range(1, len(df) + 1)
-    df["name"] = df["student_id"].map(lambda i: f"Student {i:04d}")
-    df["pass_fail"] = (df["G3"] >= PASS_MARK).astype(int)
-    return df[COLUMNS]
+    raw = pd.read_csv(RAW_FILE, sep=";")
+    out = pd.DataFrame({
+        "gender": raw["Gender"].map({1: "Male", 0: "Female"}),
+        "age": raw["Age at enrollment"],
+        "programme": raw["Course"].map(PROGRAMMES),
+        "attendance": raw["Daytime/evening attendance"].map({1: "Daytime", 0: "Evening"}),
+        "admission_mark": (raw["Admission grade"] / 2).round(1),
+        "prev_mark": (raw["Previous qualification (grade)"] / 2).round(1),
+        "scholarship": _yes_no(raw["Scholarship holder"]),
+        "tuition_paid": _yes_no(raw["Tuition fees up to date"]),
+        "debtor": _yes_no(raw["Debtor"]),
+        "s1_enrolled": raw["Curricular units 1st sem (enrolled)"],
+        "s1_approved": raw["Curricular units 1st sem (approved)"],
+        "s1_mark": (raw["Curricular units 1st sem (grade)"] * 5).round(1),
+        "s2_enrolled": raw["Curricular units 2nd sem (enrolled)"],
+        "s2_approved": raw["Curricular units 2nd sem (approved)"],
+        "s2_mark": (raw["Curricular units 2nd sem (grade)"] * 5).round(1),
+        "outcome": raw["Target"],
+    })
+    if out["programme"].isna().any():
+        raise ValueError("Unknown course code in the raw file")
+    out.insert(0, "student_id", range(1, len(out) + 1))
+    out.insert(1, "name", out["student_id"].map(lambda i: f"Student {i:04d}"))
+    return out[COLUMNS]
 
 
 if __name__ == "__main__":
-    out = build()
-    out.to_csv(OUT_FILE, index=False)
-    print(f"Wrote {len(out)} real student records -> {OUT_FILE}")
-    print(out.groupby("subject").size().to_string())
-    print(f"Pass rate: {out['pass_fail'].mean():.1%}")
+    df = build()
+    df.to_csv(OUT_FILE, index=False)
+    print(f"Wrote {len(df)} real student records -> {OUT_FILE}")
+    print(df["outcome"].value_counts().to_string())
+    print(f"Dropout rate: {(df['outcome'] == 'Dropout').mean():.1%}")

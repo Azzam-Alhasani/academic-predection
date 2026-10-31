@@ -48,11 +48,7 @@ if not exist "app\data\sample_students.csv" (
     echo [OK] Dataset ready.
 )
 
-REM Create the admin login on first run (the password is printed once)
-if not exist "app\data\users.csv" (
-    echo [INFO] Creating the admin login...
-    python app\data\create_users.py
-)
+REM First start creates a local login (admin / admin123) and prints it; change it in the app.
 
 echo.
 echo ============================================================
