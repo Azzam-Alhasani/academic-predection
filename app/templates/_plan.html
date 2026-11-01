@@ -1,0 +1,57 @@
+{# Semester plan. Expects: plan (from plan_semester / plan_for_student) #}
+{% set tier_color = {'Hard': 'danger', 'Medium': 'warning', 'Easy': 'success'} %}
+<div class="row g-3">
+  <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-value">{{ plan.credits }}</div><div class="stat-label">Credits · {{ plan.load }}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-value">{{ '%.2f'|format(plan.sgpa) }}</div><div class="stat-label">Expected SGPA</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-value">{{ '%.2f'|format(plan.cgpa) }}</div><div class="stat-label">Expected CGPA after this semester{% if plan.prior_cgpa is not none %} (now {{ '%.2f'|format(plan.prior_cgpa) }}){% endif %}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-value">{{ (plan.p_any_fail * 100)|round|int }}%</div><div class="stat-label">Chance of failing at least one course</div></div></div></div>
+</div>
+
+<div class="card mt-3"><div class="card-header">Courses this semester, compared with each other</div>
+  <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Course</th><th>Cr</th><th>Difficulty</th><th>Class mean</th><th>Attendance</th><th>Expected mark</th><th>Chance of F</th><th>With 90% attendance</th></tr></thead><tbody>
+    {% for c in plan.courses %}<tr>
+      <td>{{ c.course_name }}{% if c.attempt > 1 %} <span class="badge text-bg-secondary">retake</span>{% endif %}</td><td>{{ c.credits }}</td>
+      <td><span class="badge text-bg-{{ tier_color[c.tier] }}">{{ c.tier }}</span> <span class="small text-muted">{{ '%.1f'|format(c.difficulty) }}</span></td>
+      <td>{{ '%.0f'|format(c.class_mean) }}%</td><td>{{ '%.0f'|format(c.attendance) }}%</td>
+      <td><strong>{{ '%.0f'|format(c.mark) }}%</strong> <span class="text-muted">({{ c.grade }})</span></td>
+      <td class="{{ 'text-danger fw-semibold' if c.p_fail >= 0.3 }}">{{ (c.p_fail * 100)|round|int }}%</td>
+      <td class="small">{{ '%.0f'|format(c.mark_att) }}% · {{ (c.p_fail_att * 100)|round|int }}% fail</td></tr>{% endfor %}
+    </tbody></table></div>
+  <div class="card-footer small text-muted">Difficulty compares each course with the marks students normally get in their other courses (Hard = the toughest third). Chance of F: {{ plan.models.classifier or 'selected model' }}; mark: {{ plan.models.regressor or 'selected model' }}; typical mark error about ±{{ '%.0f'|format(plan.sd) }} marks.</div>
+</div>
+
+{% if plan.withdraw %}
+<div class="card mt-3"><div class="card-header">What if you withdraw one course? (W is not counted in GPA)</div>
+  <div class="table-responsive"><table class="table table-sm mb-0">
+    <thead><tr><th>Withdraw</th><th>Chance of F</th><th>SGPA</th><th>CGPA</th><th>Change</th><th>Credits left</th></tr></thead><tbody>
+    {% for w in plan.withdraw %}<tr><td>{{ w.course_name }}</td><td>{{ (w.p_fail * 100)|round|int }}%</td><td>{{ '%.2f'|format(w.sgpa) }}</td><td>{{ '%.2f'|format(w.cgpa) }}</td>
+      <td class="{{ 'text-success fw-semibold' if w.d_cgpa > 0 else 'text-danger' }}">{{ '%+.2f'|format(w.d_cgpa) }}</td>
+      <td>{{ w.credits_left|int }} ({{ w.load_after }}){% if not w.full_time %} <i class="fa-solid fa-triangle-exclamation text-warning" title="Below the assumed full-time minimum"></i>{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div></div>
+{% endif %}
+
+<div class="card mt-3"><div class="card-header">What if you attend more?</div><div class="card-body">
+  <p class="mb-1">At 90% attendance in every course: SGPA <strong>{{ '%.2f'|format(plan.sgpa) }} → {{ '%.2f'|format(plan.sgpa_att) }}</strong>,
+    CGPA <strong>{{ '%.2f'|format(plan.cgpa) }} → {{ '%.2f'|format(plan.cgpa_att) }}</strong>.</p>
+  <p class="small text-muted mb-0">Courses where you are already above 90% are left unchanged, and attending more is never predicted to lower a mark.</p></div></div>
+
+{% if plan.target %}
+<div class="alert alert-{{ 'info' if plan.reachable else 'warning' }} mt-3 mb-0">
+  To reach a CGPA of <strong>{{ '%.2f'|format(plan.target) }}</strong> you need an SGPA of about <strong>{{ '%.2f'|format(plan.needed_sgpa) }}</strong> this semester
+  ({{ 'reachable: the maximum is 4.00' if plan.reachable else 'not reachable in one semester: it is above 4.00' }}).</div>
+{% endif %}
+
+<div class="card mt-3"><div class="card-header">Recommendations</div><ul class="list-group list-group-flush">
+  {% for s in plan.suggestions %}<li class="list-group-item">
+    <span class="badge text-bg-{{ {'high': 'danger', 'medium': 'warning', 'low': 'secondary', 'info': 'info'}.get(s.priority, 'secondary') }} me-1">{{ s.priority }}</span><strong>{{ s.title }}</strong>
+    <div class="small mt-1">{{ s.text }}</div>{% if s.why %}<div class="small text-muted formula">{{ s.why }}</div>{% endif %}</li>
+  {% else %}<li class="list-group-item text-muted">No concerns found for this plan.</li>{% endfor %}
+</ul><div class="card-footer small text-muted">These are statistical estimates from simulated records, not promises. Check withdrawal deadlines and rules with your advisor.</div></div>
+
+<div class="card mt-3"><div class="card-header">Calculations</div><div class="accordion accordion-flush" id="calcAcc">
+  {% for c in plan.calculations %}<div class="accordion-item"><h2 class="accordion-header">
+    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#calc{{ loop.index }}"><span class="me-2">{{ c.title }}:</span><strong>{{ c.value }}</strong></button></h2>
+    <div id="calc{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#calcAcc"><div class="accordion-body small">
+      <div class="formula"><strong>Formula:</strong> {{ c.formula }}</div><div><strong>Working:</strong> {{ c.working }}</div><div class="text-muted">{{ c.meaning }}</div></div></div></div>{% endfor %}
+</div></div>

@@ -1,19 +1,11 @@
-{# Shared student fields. Expects: f (dict of current values), courses (list); flags: with_name, with_final #}
-{% macro number(name, label, lo, hi, step=1, col='col-6 col-md-3', required=true) %}
-<div class="{{ col }}"><label class="form-label">{{ label }}</label>
-  <input type="number" name="{{ name }}" class="form-control" min="{{ lo }}" max="{{ hi }}" step="{{ step }}"
-    value="{{ f.get(name) if f.get(name) is not none and f.get(name) == f.get(name) else '' }}" {{ 'required' if required }} /></div>
-{% endmacro %}
+{# Student fields. Expects: f (dict), majors, genders; flag: with_name #}
 <div class="row g-3">
-  {% if with_name %}
-  <div class="col-md-6"><label class="form-label">Name <span class="text-muted">(optional label)</span></label>
+  <div class="col-md-4"><label class="form-label">Name <span class="text-muted">(optional label)</span></label>
     <input type="text" name="name" class="form-control" maxlength="60" value="{{ f.get('name') or '' }}" placeholder="Student label" /></div>
-  {% endif %}
-  <div class="col-6 col-md-3"><label class="form-label">Course</label>
-    <select name="course" class="form-select">{% for c in courses %}<option {{ 'selected' if f.get('course') == c }}>{{ c }}</option>{% endfor %}</select></div>
-  {{ number('t1_mark', 'Term 1 mark (%)', 0, 100, 0.5) }}
-  {{ number('t2_mark', 'Term 2 mark (%)', 0, 100, 0.5, required=false) }}
-  {{ number('absences', 'Absences (classes missed)', 0, 100) }}
-  {% if with_final %}{{ number('final_mark', 'Final mark (%)', 0, 100, 0.5, required=false) }}{% endif %}
-  <div class="col-12"><div class="small text-muted">Leave <strong>Term 2</strong> empty if it has not happened yet{% if with_final %}, and <strong>Final mark</strong> empty until it is known (those records are scored but not used for training){% endif %}.</div></div>
+  <div class="col-6 col-md-2"><label class="form-label">Gender</label>
+    <select name="gender" class="form-select">{% for g in genders %}<option {{ 'selected' if f.get('gender') == g }}>{{ g }}</option>{% endfor %}</select></div>
+  <div class="col-6 col-md-3"><label class="form-label">Major</label>
+    <select name="major" class="form-select">{% for m in majors %}<option {{ 'selected' if f.get('major') == m }}>{{ m }}</option>{% endfor %}</select></div>
+  <div class="col-6 col-md-3"><label class="form-label">Entry semester</label>
+    <input type="text" name="entry_semester" class="form-control" required pattern="20\d\d (Spring|Summer|Fall)" placeholder="2025 Fall" value="{{ f.get('entry_semester') or current_semester }}" /></div>
 </div>

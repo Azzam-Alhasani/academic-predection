@@ -1,4 +1,4 @@
-> **Note:** this document was written for an earlier version of the project that used generated sample data. The application now uses the real UCI Student Performance dataset; see the main [README](../README.md) for current data, results and deployment steps. Figures and charts below may be out of date.
+> **Note:** this document describes an earlier version of the project. The application now works on simulated UTAS-style transcripts (semesters, courses, marks, attendance, majors) and a semester planner; see the main [README](../README.md) for the current data, results and deployment steps. Figures and charts below are out of date.
 
 # 01 — Project Overview
 

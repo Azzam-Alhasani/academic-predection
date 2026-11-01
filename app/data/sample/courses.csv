@@ -1,0 +1,118 @@
+course_code,course_name,major,credit_hours,level
+ENG101,English for Academic Purposes I,Common,3,1
+ENG102,Academic Writing II,Common,3,1
+ENG201,Public Speaking,Common,3,2
+ETH201,Working Ethics,Common,2,2
+ENT201,Entrepreneurship and Innovation,Common,3,2
+ARB101,Arabic Language Skills,Common,3,1
+MATH101,Calculus I,Common,3,1
+MATH102,Calculus II,Common,3,1
+MATH201,Engineering Mathematics,Common,3,2
+STAT201,Statistics,Common,3,2
+PHYS101,Physics I,Common,3,1
+PHYS102,Physics II,Common,4,1
+CHEM101,General Chemistry,Common,4,1
+EGR101,Engineering Graphics,Engineering,3,1
+EGR102,Programming for Engineers,Engineering,3,1
+EGR103,Engineering Workshop,Engineering,3,1
+EGR201,Circuits I,Engineering,3,2
+EGR202,Digital Logic Design,Engineering,3,2
+EGR203,Materials Science,Engineering,3,2
+EGR204,Electronics,Engineering,3,2
+EGR205,Thermodynamics,Engineering,3,2
+EGR206,Microprocessors,Engineering,3,2
+EGR301,Control Systems,Engineering,3,3
+EGR302,Signals and Systems,Engineering,3,3
+EGR303,Computer Networks,Engineering,3,3
+EGR304,Project Management,Engineering,3,3
+EGR401,Embedded Systems,Engineering,3,4
+EGR402,Robotics and Automation,Engineering,3,4
+EGR403,Capstone Project I,Engineering,3,4
+EGR404,Research Methodology,Engineering,3,4
+BUS101,Principles of Management,Business,3,1
+BUS102,Introduction to Accounting,Business,3,1
+ECO101,Microeconomics,Business,3,1
+BUS103,Business Mathematics,Business,3,1
+BUS104,Financial Accounting,Business,3,1
+BUS105,Marketing Principles,Business,3,1
+ECO102,Macroeconomics,Business,3,1
+BUS106,Business Communication,Business,3,1
+BUS201,Managerial Accounting,Business,3,2
+BUS202,Organizational Behaviour,Business,3,2
+BUS203,Business Law,Business,3,2
+BUS204,Corporate Finance,Business,3,2
+BUS205,Operations Management,Business,3,2
+BUS206,Human Resource Management,Business,3,2
+BUS207,Business Analytics,Business,3,2
+BUS301,Investment Analysis,Business,3,3
+BUS302,International Business,Business,3,3
+BUS303,Strategic Management,Business,3,3
+BUS304,Consumer Behaviour,Business,3,3
+BUS401,Business Research,Business,3,4
+BUS402,Entrepreneurial Venture,Business,3,4
+BUS403,Capstone Project,Business,3,4
+BUS404,Risk Management,Business,3,4
+ITC101,Introduction to Programming,Information Technology,3,1
+ITC102,Computer Fundamentals,Information Technology,3,1
+ITC103,Digital Logic,Information Technology,3,1
+ITC104,Discrete Mathematics,Information Technology,3,1
+ITC105,Object-Oriented Programming,Information Technology,3,1
+ITC106,Web Development,Information Technology,3,1
+ITC201,Data Structures,Information Technology,3,2
+ITC202,Database Systems,Information Technology,3,2
+ITC203,Computer Networks,Information Technology,3,2
+ITC204,Operating Systems,Information Technology,3,2
+ITC205,Software Engineering,Information Technology,3,2
+ITC206,Web Applications,Information Technology,3,2
+ITC207,Network Security,Information Technology,3,2
+ITC208,Algorithms,Information Technology,3,2
+ITC301,Machine Learning,Information Technology,3,3
+ITC302,Mobile Applications,Information Technology,3,3
+ITC303,Cloud Computing,Information Technology,3,3
+ITC304,Human-Computer Interaction,Information Technology,3,3
+ITC401,Project I,Information Technology,3,4
+ITC402,IT Project Management,Information Technology,3,4
+ITC403,Cybersecurity,Information Technology,3,4
+ITC404,Research Methodology,Information Technology,3,4
+BIO101,General Biology,Applied Sciences,3,1
+CHEM102,Organic Chemistry,Applied Sciences,4,1
+BIO102,Cell Biology,Applied Sciences,3,1
+LAB101,Laboratory Skills,Applied Sciences,2,1
+CHEM201,Analytical Chemistry,Applied Sciences,4,2
+BIO201,Biochemistry,Applied Sciences,3,2
+ENV201,Environmental Science,Applied Sciences,3,2
+BIO202,Microbiology,Applied Sciences,3,2
+CHEM202,Physical Chemistry,Applied Sciences,3,2
+LAB201,Instrumental Analysis,Applied Sciences,3,2
+BIO203,Genetics,Applied Sciences,3,2
+BIO301,Molecular Biology,Applied Sciences,3,3
+CHEM301,Spectroscopy,Applied Sciences,3,3
+ENV301,Water Quality,Applied Sciences,3,3
+SCI301,Research Design,Applied Sciences,3,3
+SCI401,Research Project I,Applied Sciences,3,4
+BIO401,Biotechnology,Applied Sciences,3,4
+CHEM401,Industrial Chemistry,Applied Sciences,3,4
+SCI402,Quality Assurance,Applied Sciences,3,4
+DES101,Design Fundamentals,Design,3,1
+DES102,Drawing,Design,3,1
+DES103,Colour Theory,Design,3,1
+ART101,History of Art,Design,3,1
+DES104,Digital Design Tools,Design,3,1
+DES105,Typography,Design,3,1
+DES106,Materials and Processes,Design,3,1
+DES201,Visual Communication,Design,3,2
+DES202,3D Modelling,Design,3,2
+DES203,Design Research,Design,3,2
+DES204,Photography,Design,3,2
+DES205,Branding,Design,3,2
+DES206,Interaction Design,Design,3,2
+DES207,Studio Project I,Design,3,2
+DES208,Packaging Design,Design,3,2
+DES301,Studio Project II,Design,3,3
+DES302,UX Research,Design,3,3
+DES303,Motion Graphics,Design,3,3
+DES304,Design Management,Design,3,3
+DES401,Capstone Project,Design,3,4
+DES402,Portfolio,Design,3,4
+DES403,Professional Practice,Design,3,4
+DES404,Design Research Methods,Design,3,4

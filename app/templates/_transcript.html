@@ -1,0 +1,33 @@
+{# Transcript in the UTAS layout. Expects: transcript (list of semesters), staff (bool) #}
+{% for sem in transcript|reverse %}
+<div class="card mt-3"><div class="card-header d-flex flex-wrap justify-content-between">
+  <span><strong>{{ sem.semester }}</strong>{% if sem.in_progress %} <span class="badge text-bg-info">in progress</span>{% endif %}</span>
+  <span class="small text-muted">{{ sem.load }} · {{ sem.credits|int }} credits</span></div>
+  <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Code</th><th>Course</th><th>Cr</th><th>Mark</th><th>Attend.</th><th>Grade</th><th>Pts</th>{% if staff %}<th class="no-print"></th>{% endif %}</tr></thead><tbody>
+    {% for c in sem.courses %}<tr>
+      <td>{{ c.course_code }}</td><td>{{ c.course_name }}{% if c.attempt > 1 %} <span class="badge text-bg-secondary">repeat</span>{% endif %}</td><td>{{ c.credit_hours }}</td>
+      <td>{{ ('%.0f'|format(c.mark)) if c.mark == c.mark else '-' }}</td><td>{{ '%.0f'|format(c.attendance) }}%</td>
+      <td>{% if c.status == 'Withdrawn' %}<span class="badge text-bg-secondary">W</span>{% elif c.status == 'In progress' %}<span class="text-muted">IP</span>{% else %}<span class="{{ 'text-danger fw-semibold' if c.result == 'F' }}">{{ c.grade }}</span>{% endif %}</td>
+      <td>{{ ('%.1f'|format(c.points)) if c.points == c.points else '-' }}</td>
+      {% if staff %}<td class="text-end no-print">
+        <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="collapse" data-bs-target="#enr{{ c.enrollment_id }}"><i class="fa-solid fa-pen"></i></button></td>{% endif %}
+    </tr>
+    {% if staff %}<tr class="collapse no-print" id="enr{{ c.enrollment_id }}"><td colspan="8" class="bg-body-tertiary">
+      <form method="POST" action="{{ url_for('students.enrollment_edit', enrollment_id=c.enrollment_id) }}" class="row g-2 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="col-6 col-md-3"><label class="form-label small mb-0">Status</label><select name="status" class="form-select form-select-sm">{% for s in statuses %}<option {{ 'selected' if s == c.status }}>{{ s }}</option>{% endfor %}</select></div>
+        <div class="col-6 col-md-3"><label class="form-label small mb-0">Mark (0-100)</label><input type="number" name="mark" min="0" max="100" step="1" class="form-control form-control-sm" value="{{ '%.0f'|format(c.mark) if c.mark == c.mark else '' }}" /></div>
+        <div class="col-6 col-md-3"><label class="form-label small mb-0">Attendance %</label><input type="number" name="attendance" min="0" max="100" step="0.1" required class="form-control form-control-sm" value="{{ c.attendance }}" /></div>
+        <div class="col-6 col-md-3 d-flex gap-2"><button class="btn btn-sm btn-primary">Save</button></div>
+      </form>
+      <form method="POST" action="{{ url_for('students.enrollment_delete', enrollment_id=c.enrollment_id) }}" class="mt-2" data-confirm="Delete this course record?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /><button class="btn btn-sm btn-outline-danger py-0">Delete record</button></form>
+    </td></tr>{% endif %}
+    {% endfor %}
+    </tbody>
+    {% if not sem.in_progress %}<tfoot class="table-light"><tr><td colspan="{{ 8 if staff else 7 }}" class="small">
+      Attempted {{ sem.attempted|int }} · Earned {{ sem.earned|int }} · Quality points {{ '%.1f'|format(sem.quality) }} ·
+      <strong>SGPA {{ '%.2f'|format(sem.sgpa) if sem.sgpa == sem.sgpa else '-' }}</strong> · LCGPA {{ '%.2f'|format(sem.lcgpa) if sem.lcgpa == sem.lcgpa else '-' }} · <strong>CGPA {{ '%.2f'|format(sem.cgpa) if sem.cgpa == sem.cgpa else '-' }}</strong></td></tr></tfoot>{% endif %}
+  </table></div></div>
+{% else %}<div class="alert alert-secondary mt-3">No course records yet.</div>{% endfor %}

@@ -8,8 +8,10 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 class Config:
     DEBUG = False
     TESTING = False
-    DATA_FILE = os.path.join(BASE_DIR, "app", "data", "students.csv")
-    SAMPLE_DATA_FILE = os.path.join(BASE_DIR, "app", "data", "sample_students.csv")
+    # Working copy of the three CSVs (edited through the web app, not committed) and the pristine
+    # simulated sample they are copied from on first start.
+    DATA_DIR = os.path.join(BASE_DIR, "app", "data", "live")
+    SAMPLE_DATA_DIR = os.path.join(BASE_DIR, "app", "data", "sample")
     MODEL_DIR = os.path.join(BASE_DIR, "app", "ml", "saved_models")
     HOST = "127.0.0.1"
     PORT = 5000

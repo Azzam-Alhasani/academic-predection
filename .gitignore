@@ -28,3 +28,6 @@ app/data/students.csv
 
 # Audit trail (may contain usernames and IP addresses)
 app/data/audit.log
+
+# Live working copy of the CSV tables (bootstrapped from app/data/sample/ on first start)
+app/data/live/

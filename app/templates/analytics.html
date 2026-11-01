@@ -7,33 +7,42 @@
 {% macro rate_chart(title, g, note='', col='col-md-6 col-xl-4') %}
 <div class="{{ col }}"><div class="card h-100"><div class="card-header">{{ title }}</div><div class="card-body">
   <div class="chart-box"><canvas data-chart="bar" data-labels='{{ g.labels|tojson }}' data-values='{{ g.fail_rate|tojson }}' data-label="Failed (%)" data-unit="%" data-color="#dc3545"></canvas></div>
-  <p class="small text-muted mt-2 mb-0">{% for l, n in g.labels|zip(g.size) %}{{ l }}: {{ n }}{{ ' · ' if not loop.last }}{% endfor %} records. {{ note }}</p></div></div></div>
+  <p class="small text-muted mt-2 mb-0">{% for l, n in g.labels|zip(g.size) %}{{ l }}: {{ n }}{{ ' · ' if not loop.last }}{% endfor %} attempts. Average mark: {% for l, m in g.labels|zip(g.mean_mark) %}{{ m }}{{ ' · ' if not loop.last }}{% endfor %}. {{ note }}</p></div></div></div>
 {% endmacro %}
 <div class="row g-4 mt-1">
   <div class="col-12"><div class="alert alert-secondary mb-0 small">
-    Each chart shows the share of course records that ended with a <strong>failed course</strong> (final mark below 50) in each group.
-    Differences describe the data; they do not prove cause.</div></div>
+    Each chart shows the share of graded course attempts that ended in <strong>F</strong> (C- or below) in each group, from the <strong>simulated</strong> records.
+    Differences describe this data; they do not prove cause.</div></div>
 
-  {{ rate_chart('By term 1 mark', data.term1, 'The strongest signal: it is known early.') }}
-  {{ rate_chart('By GPA (term 1 and 2)', data.gpa_band) }}
-  {{ rate_chart('By change from term 1 to term 2', data.trend, 'Falling marks are a warning sign.') }}
-  {{ rate_chart('By absences', data.absences, 'Clearly higher only from 11 absences.') }}
-  {{ rate_chart('By course', data.course) }}
+  {{ rate_chart('By attendance', data.attendance, 'Low attendance is where most failures sit.') }}
+  {{ rate_chart('By major', data.major) }}
+  {{ rate_chart('By credit load that semester', data.load, 'Overload means more than 18 credits.') }}
+  {{ rate_chart('By year of study', data.level) }}
+  {{ rate_chart('By gender', data.gender, 'Shown for reporting only; gender is not used by any prediction.') }}
 
-  <div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-header">GPA distribution</div><div class="card-body">
-    <div class="chart-box"><canvas data-chart="bar" data-labels='{{ data.gpa_hist_labels|tojson }}' data-values='{{ data.gpa_hist_values|tojson }}' data-label="Students" data-unit="Students"></canvas></div></div></div></div>
+  <div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-header">Failure rate by course difficulty tier</div><div class="card-body">
+    <div class="chart-box"><canvas data-chart="bar" data-labels='{{ data.tier_fail.keys()|list|tojson }}' data-values='{{ data.tier_fail.values()|list|tojson }}' data-label="Failed (%)" data-unit="%" data-color="#dc3545"></canvas></div>
+    <p class="small text-muted mt-2 mb-0">Withdrawal rate: {% for k, v in data.tier_withdraw.items() %}{{ k }} {{ v }}%{{ ' · ' if not loop.last }}{% endfor %}.</p></div></div></div>
+
+  <div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-header">CGPA distribution</div><div class="card-body">
+    <div class="chart-box"><canvas data-chart="bar" data-labels='{{ data.cgpa_hist.labels|tojson }}' data-values='{{ data.cgpa_hist['values']|tojson }}' data-label="Students" data-unit="Students"></canvas></div>
+    <p class="small text-muted mt-2 mb-0">Average CGPA by gender: {% for l, v in data.cgpa_gender.labels|zip(data.cgpa_gender['values']) %}{{ l }} {{ v }}{{ ' · ' if not loop.last }}{% endfor %}.</p></div></div></div>
 
   {% set pts = [{'label': 'Passed', 'data': [], 'color': '#20c997'}, {'label': 'Failed', 'data': [], 'color': '#dc3545'}] %}
-  {% for x, y, d in data.scatter_t1|zip(data.scatter_final, data.scatter_fail) %}{% set _ = pts[d].data.append({'x': x, 'y': y}) %}{% endfor %}
-  <div class="col-lg-7"><div class="card h-100"><div class="card-header">Term 1 mark vs final mark (300 records)</div><div class="card-body">
-    <div class="chart-box tall"><canvas data-chart="scatter" data-points='{{ pts|tojson }}' data-xtitle="Term 1 mark" data-unit="Final mark"></canvas></div></div></div></div>
+  {% for x, y, d in data.scatter.x|zip(data.scatter.y, data.scatter.fail) %}{% set _ = pts[d].data.append({'x': x, 'y': y}) %}{% endfor %}
+  <div class="col-lg-7"><div class="card h-100"><div class="card-header">Attendance vs mark (300 attempts)</div><div class="card-body">
+    <div class="chart-box tall"><canvas data-chart="scatter" data-points='{{ pts|tojson }}' data-xtitle="Attendance (%)" data-unit="Mark"></canvas></div></div></div></div>
 
-  <div class="col-lg-5"><div class="card h-100"><div class="card-header">Highest and lowest GPA</div><div class="card-body p-0">
-    <table class="table table-sm mb-0"><thead><tr><th>Student</th><th>Course</th><th>GPA</th></tr></thead><tbody>
-    {% for s in data.top %}<tr><td>{{ s.name }}</td><td class="small">{{ s.course }}</td><td class="text-success">{{ '%.2f'|format(s.gpa) }}</td></tr>{% endfor %}
-    <tr><td colspan="3" class="text-center text-muted small">...</td></tr>
-    {% for s in data.bottom %}<tr><td>{{ s.name }}</td><td class="small">{{ s.course }}</td><td class="text-danger">{{ '%.2f'|format(s.gpa) }}</td></tr>{% endfor %}
+  {% macro course_table(title, rows) %}
+  <div class="col-lg-5"><div class="card h-100"><div class="card-header">{{ title }}</div><div class="card-body p-0">
+    <table class="table table-sm mb-0"><thead><tr><th>Course</th><th>Mean</th><th>Fail %</th><th>Difficulty</th></tr></thead><tbody>
+    {% for c in rows %}<tr><td class="small">{{ c.course_name }}<br><span class="text-muted">{{ c.major }} · {{ c.credit_hours }} cr</span></td>
+      <td>{{ '%.1f'|format(c.mean_mark) }}</td><td>{{ '%.0f'|format(c.fail_rate * 100) }}</td>
+      <td><span class="badge text-bg-{{ {'Hard': 'danger', 'Medium': 'warning', 'Easy': 'success'}[c.tier] }}">{{ c.tier }}</span> {{ '%.1f'|format(c.difficulty) }}</td></tr>{% endfor %}
     </tbody></table></div></div></div>
+  {% endmacro %}
+  {{ course_table('Hardest courses', data.hardest) }}
+  {{ course_table('Easiest courses', data.easiest) }}
 </div>
 {% endif %}
 {% endblock %}

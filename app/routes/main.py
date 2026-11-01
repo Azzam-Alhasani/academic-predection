@@ -4,7 +4,7 @@ Main dashboard route (aggregate statistics only: safe to show without a login).
 
 from flask import Blueprint, render_template
 
-from app.data.data_loader import get_dashboard_stats
+from app.data.stats import get_dashboard_stats
 
 main_bp = Blueprint("main", __name__)
 

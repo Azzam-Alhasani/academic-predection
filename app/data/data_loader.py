@@ -1,10 +1,15 @@
 """
-Data loader for the Academic Performance Monitoring & Prediction System.
+Data layer: three CSV tables shaped like a university transcript system.
 
-Works on the real UCI "Student Performance" data (Cortez & Silva, 2008). One record is one
-student in one course with only the factors that matter: term 1 mark, term 2 mark, absences and
-the final mark. Marks are percentages (0-100); letters, GPA and standing come from app/grading.py.
-A record without a final mark is "In progress" (it can be scored, but not used for training).
+    students.csv     student_id, name, gender, major, entry_semester
+    courses.csv      course_code, course_name, major, credit_hours, level
+    enrollments.csv  enrollment_id, student_id, semester, course_code, mark, attendance, status
+
+status is Completed, Withdrawn (W) or In progress. Everything else (grade, points, GPA, standing,
+attempt numbers, course difficulty) is calculated here from marks and credit hours using
+app/grading.py, the way the transcript does it.
+
+The tables returned by load_tables() are cached and must be treated as read-only.
 """
 
 import os
@@ -17,228 +22,260 @@ from flask import current_app
 
 from app import grading
 
-RESULTS = ["Pass", "Fail", "In progress"]
-DERIVED_COLS = [
-    "t1_gpa", "t2_gpa", "gpa", "standing", "avg_mark", "letter", "trend", "absence_band",
-    "result", "fail", "at_risk",
-]
-GPA_BANDS = ["0.0-0.4", "0.5-0.9", "1.0-1.4", "1.5-1.9", "2.0+"]
+FILES = ("students.csv", "courses.csv", "enrollments.csv")
+STUDENT_COLUMNS = ["student_id", "name", "gender", "major", "entry_semester"]
+ENROLLMENT_COLUMNS = ["enrollment_id", "student_id", "semester", "course_code", "mark", "attendance", "status"]
+STATUSES = ("Completed", "Withdrawn", "In progress")
+TERM_ORDER = {"Spring": 1, "Summer": 2, "Fall": 3}
 
-# Serialises read-modify-write cycles on the CSV (the web server runs several threads).
 _write_lock = threading.RLock()
+_cache = {"key": None, "tables": None}
+_cache_lock = threading.Lock()
 
 
-def _get_data_file():
-    data_file = current_app.config["DATA_FILE"]
-    sample_file = current_app.config["SAMPLE_DATA_FILE"]
-    # Bootstrap the working copy from the pristine real dataset on first run.
-    if not os.path.exists(data_file) and os.path.exists(sample_file):
-        shutil.copy(sample_file, data_file)
-    return data_file
+class Tables:
+    def __init__(self, students, courses, enrollments, summary):
+        self.students, self.courses, self.enrollments, self.summary = students, courses, enrollments, summary
+
+    @property
+    def empty(self):
+        return self.students.empty or self.enrollments.empty
+
+    @property
+    def current_semester(self):
+        progress = self.enrollments[self.enrollments["status"] == "In progress"]
+        pool = progress if not progress.empty else self.enrollments
+        return None if pool.empty else max(pool["semester"], key=semester_order)
 
 
-def load_students() -> pd.DataFrame:
-    """Load student records, returning an empty DataFrame if the file is missing."""
+def semester_order(label: str) -> int:
     try:
-        return _compute_derived_columns(pd.read_csv(_get_data_file()))
-    except Exception:
-        return pd.DataFrame()
+        year, term = str(label).split()
+        return int(year) * 10 + TERM_ORDER.get(term, 0)
+    except ValueError:
+        return 0
 
 
-def save_students(df: pd.DataFrame) -> None:
-    """Persist the student table (derived columns are never stored)."""
-    df.drop(columns=[c for c in DERIVED_COLS if c in df.columns]).to_csv(_get_data_file(), index=False)
+def _paths():
+    data_dir, sample_dir = current_app.config["DATA_DIR"], current_app.config["SAMPLE_DATA_DIR"]
+    os.makedirs(data_dir, exist_ok=True)
+    for name in FILES:                               # first start: copy the sample tables
+        target = os.path.join(data_dir, name)
+        if not os.path.exists(target) and os.path.exists(os.path.join(sample_dir, name)):
+            shutil.copy(os.path.join(sample_dir, name), target)
+    return {name: os.path.join(data_dir, name) for name in FILES}
 
 
-def _persistent(df: pd.DataFrame) -> pd.DataFrame:
-    return df[[c for c in df.columns if c not in DERIVED_COLS]].copy()
+# ── loading + calculations ───────────────────────────────────────────────────
+
+def load_tables() -> Tables:
+    """All tables with derived columns; empty tables if the files are missing."""
+    try:
+        paths = _paths()
+        key = tuple((p, os.path.getmtime(p)) for p in paths.values())
+    except (OSError, KeyError):
+        return Tables(*(pd.DataFrame() for _ in range(4)))
+    with _cache_lock:
+        if _cache["key"] == key:
+            return _cache["tables"]
+        students = pd.read_csv(paths["students.csv"])
+        courses = pd.read_csv(paths["courses.csv"])
+        enrollments = pd.read_csv(paths["enrollments.csv"])
+        tables = _derive(students, courses, enrollments)
+        _cache.update(key=key, tables=tables)
+        return tables
 
 
-def _compute_derived_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Add term GPAs, GPA, letter, standing, trend, absence band, result and risk flag."""
-    df = df.copy()
-    for col in ("t1_mark", "absences"):
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-    df["t2_mark"] = pd.to_numeric(df["t2_mark"], errors="coerce")      # blank = term 2 not yet done
-    df["final_mark"] = pd.to_numeric(df.get("final_mark"), errors="coerce")
-    if "person_id" not in df.columns:
-        df["person_id"] = range(1, len(df) + 1)
+def _derive(students, courses, enrollments) -> Tables:
+    enr = enrollments.merge(courses[["course_code", "course_name", "credit_hours", "level", "major"]]
+                            .rename(columns={"major": "course_major"}), on="course_code", how="left")
+    enr["mark"] = pd.to_numeric(enr["mark"], errors="coerce")
+    enr["attendance"] = pd.to_numeric(enr["attendance"], errors="coerce")
+    enr["credit_hours"] = enr["credit_hours"].fillna(3)
+    enr["sem_order"] = enr["semester"].map(semester_order)
+    done = enr["status"].eq("Completed") & enr["mark"].notna()
 
-    df["t1_gpa"] = [grading.term_gpa(m) for m in df.t1_mark]
-    df["t2_gpa"] = [np.nan if pd.isna(m) else grading.term_gpa(m) for m in df.t2_mark]
-    df["gpa"] = [grading.gpa(a, b) for a, b in zip(df.t1_mark, df.t2_mark)]
-    df["standing"] = [grading.standing(g) for g in df.gpa]
-    df["avg_mark"] = [grading.average_mark(a, b) for a, b in zip(df.t1_mark, df.t2_mark)]
-    df["letter"] = [grading.letter_for(m) for m in df.avg_mark]
-    df["trend"] = (df.t2_mark - df.t1_mark).round(1)
-    df["absence_band"] = [grading.absence_band(a) for a in df.absences]
-
-    known = df["final_mark"].notna()
-    df["fail"] = np.where(known, (df["final_mark"] < grading.PASS_MARK).astype(float), np.nan)
-    df["result"] = np.where(~known, "In progress", np.where(df["final_mark"] < grading.PASS_MARK, "Fail", "Pass"))
-    df["at_risk"] = (df.gpa < grading.GOOD_STANDING_GPA).astype(int)
-    return df
+    letters = [grading.letter_for(m) if d else None for m, d in zip(enr["mark"], done)]
+    enr["grade"] = np.where(done, letters, np.where(enr["status"].eq("Withdrawn"), "W", ""))
+    enr["points"] = [grading.POINTS.get(g) if d else np.nan for g, d in zip(enr["grade"], done)]
+    enr["result"] = np.where(done, np.where(enr["points"] >= grading.PASS_POINTS, "P", "F"),
+                             np.where(enr["status"].eq("Withdrawn"), "W", "IP"))
+    enr["attempted"] = np.where(done, enr["credit_hours"], 0.0)
+    enr["earned"] = np.where(enr["result"].eq("P"), enr["credit_hours"], 0.0)
+    enr["quality"] = np.where(done, enr["credit_hours"] * enr["points"].fillna(0), 0.0)
+    enr = enr.sort_values(["student_id", "sem_order", "enrollment_id"]).reset_index(drop=True)
+    enr["attempt"] = enr.groupby(["student_id", "course_code"]).cumcount() + 1
+    enr["is_latest"] = ~enr.duplicated(["student_id", "course_code"], keep="last")
+    enr["attendance_band"] = [grading.attendance_band(a) for a in enr["attendance"]]
+    return Tables(students.copy(), courses.copy(), enr, _summarise(students, enr))
 
 
-def get_student_by_id(student_id: int) -> dict | None:
-    """Return a single student record as a dict, or None if not found."""
-    df = load_students()
-    if df.empty:
-        return None
-    row = df[df["student_id"] == int(student_id)]
+def _summarise(students, enr) -> pd.DataFrame:
+    """One row per student: credits, CGPA, LCGPA, standing, current load, risk flag."""
+    base = students.set_index("student_id")
+    done = enr[enr["attempted"] > 0]
+    total = done.groupby("student_id").agg(attempted=("attempted", "sum"), earned=("earned", "sum"),
+                                           quality=("quality", "sum"))
+    latest = done[done["is_latest"]].groupby("student_id").agg(l_attempted=("attempted", "sum"), l_quality=("quality", "sum"))
+    cur = enr[enr["status"] == "In progress"].groupby("student_id").agg(
+        current_credits=("credit_hours", "sum"), current_courses=("enrollment_id", "size"))
+    extra = enr.groupby("student_id").agg(withdrawals=("result", lambda r: int((r == "W").sum())),
+                                          repeats=("attempt", lambda a: int((a > 1).sum())),
+                                          semesters=("semester", "nunique"))
+    out = base.join(total).join(latest).join(cur).join(extra)
+    for col in ("attempted", "earned", "quality", "l_attempted", "l_quality", "current_credits", "current_courses",
+                "withdrawals", "repeats", "semesters"):
+        out[col] = out[col].fillna(0)
+    out["cgpa"] = np.where(out["attempted"] > 0, (out["quality"] / out["attempted"].where(out["attempted"] > 0, 1)).round(2), np.nan)
+    out["lcgpa"] = np.where(out["l_attempted"] > 0, (out["l_quality"] / out["l_attempted"].where(out["l_attempted"] > 0, 1)).round(2), np.nan)
+    out["standing"] = [grading.standing(None if pd.isna(c) else c) for c in out["cgpa"]]
+    out["at_risk"] = (out["cgpa"].notna() & (out["cgpa"] < grading.GOOD_STANDING_CGPA)).astype(int)
+    out["load_status"] = [grading.load_status(c) if c else "-" for c in out["current_credits"]]
+    return out.reset_index()
+
+
+# ── transcript for one student ───────────────────────────────────────────────
+
+def get_student(student_id: int) -> dict | None:
+    t = load_tables()
+    row = t.summary[t.summary["student_id"] == int(student_id)] if not t.summary.empty else t.summary
     if row.empty:
         return None
-    record = row.iloc[0].to_dict()
-    # Convert NaN to None for templates.
-    return {k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in record.items()}
+    return {k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in row.iloc[0].to_dict().items()}
 
 
-def _add_student_unlocked(data: dict) -> int:
-    df = load_students()
-    base = _persistent(df) if not df.empty else pd.DataFrame()
-    new_id = int(df["student_id"].max()) + 1 if not df.empty else 1
-    data = {k: v for k, v in data.items() if k not in DERIVED_COLS}
-    data["student_id"] = new_id
-    data["person_id"] = int(df["person_id"].max()) + 1 if not df.empty else 1
-    if not str(data.get("name", "")).strip():
-        data["name"] = f"Student {new_id:04d}"
-    save_students(pd.concat([base, pd.DataFrame([data])], ignore_index=True))
-    return new_id
+def transcript(student_id: int) -> list[dict]:
+    """Semesters in order, each with its courses and SGPA / LCGPA / CGPA to date (like the printed transcript)."""
+    t = load_tables()
+    enr = t.enrollments[t.enrollments["student_id"] == int(student_id)]
+    out, cum_att, cum_q = [], 0.0, 0.0
+    seen = {}                                          # course -> (attempted, quality) of its latest attempt so far
+    for semester, group in enr.groupby("sem_order", sort=True):
+        att, qual, earned = float(group["attempted"].sum()), float(group["quality"].sum()), float(group["earned"].sum())
+        for _, r in group.iterrows():
+            if r["attempted"] > 0:
+                seen[r["course_code"]] = (r["attempted"], r["quality"])
+        cum_att, cum_q = cum_att + att, cum_q + qual
+        l_att = sum(a for a, _ in seen.values()); l_q = sum(q for _, q in seen.values())
+        credits = float(group.loc[group["status"] != "Withdrawn", "credit_hours"].sum())
+        out.append({
+            "semester": group["semester"].iloc[0], "in_progress": bool((group["status"] == "In progress").any()),
+            "courses": group.to_dict("records"), "attempted": att, "earned": earned, "quality": round(qual, 1),
+            "sgpa": round(qual / att, 2) if att else None,
+            "lcgpa": round(l_q / l_att, 2) if l_att else None, "cgpa": round(cum_q / cum_att, 2) if cum_att else None,
+            "cum_attempted": cum_att, "load": grading.load_status(credits) if credits else "-", "credits": credits,
+        })
+    return out
 
 
-def _update_student_unlocked(student_id: int, data: dict) -> bool:
-    df = load_students()
-    if df.empty:
-        return False
-    base = _persistent(df)
-    idx = base[base["student_id"] == int(student_id)].index
-    if idx.empty:
-        return False
-    for key, val in data.items():
-        if key in base.columns and key != "student_id":
-            base.at[idx[0], key] = val
-    save_students(base)
-    return True
+# ── course difficulty (measured from the marks) ──────────────────────────────
+
+def course_stats(min_n: int = 15) -> pd.DataFrame:
+    """
+    Per course: attempts, mean mark, fail rate, withdrawal rate and a difficulty index.
+
+        difficulty = average over attempts of (student's mean mark in their OTHER courses - mark here)
+
+    A positive index means students score that many marks LOWER here than in their other courses.
+    It compares each student with themselves, so a course is not "hard" just because weaker students take it.
+    """
+    t = load_tables()
+    if t.empty:
+        return pd.DataFrame()
+    done = t.enrollments[t.enrollments["attempted"] > 0].copy()
+    g = done.groupby("student_id")["mark"]
+    n, s = g.transform("size"), g.transform("sum")
+    done = done[n > 1].copy()
+    done["other_mean"] = (s[done.index] - done["mark"]) / (n[done.index] - 1)
+    done["gap"] = done["other_mean"] - done["mark"]
+    stats = done.groupby("course_code").agg(attempts=("mark", "size"), mean_mark=("mark", "mean"),
+                                            fail_rate=("result", lambda r: (r == "F").mean()),
+                                            difficulty=("gap", "mean")).reset_index()
+    wd = t.enrollments[t.enrollments["result"].isin(["W", "P", "F"])].groupby("course_code")["result"].agg(
+        lambda r: (r == "W").mean()).rename("withdraw_rate")
+    stats = stats.merge(wd, on="course_code", how="left").merge(
+        t.courses[["course_code", "course_name", "major", "credit_hours", "level"]], on="course_code")
+    stats = stats[stats["attempts"] >= min_n].copy()
+    if len(stats) >= 3:
+        hi, lo = stats["difficulty"].quantile([2 / 3, 1 / 3])
+        stats["tier"] = np.where(stats["difficulty"] >= hi, "Hard", np.where(stats["difficulty"] <= lo, "Easy", "Medium"))
+    else:
+        stats["tier"] = "Medium"
+    return stats.round({"mean_mark": 1, "fail_rate": 3, "difficulty": 1, "withdraw_rate": 3}).sort_values("difficulty", ascending=False)
 
 
-def _delete_student_unlocked(student_id: int) -> bool:
-    df = load_students()
-    if df.empty:
-        return False
-    base = _persistent(df)
-    remaining = base[base["student_id"] != int(student_id)]
-    if len(remaining) == len(base):
-        return False
-    save_students(remaining)
-    return True
+# ── writing ──────────────────────────────────────────────────────────────────
+
+def _write(name: str, df: pd.DataFrame) -> None:
+    df.to_csv(_paths()[name], index=False)
+
+
+def _raw(name: str) -> pd.DataFrame:
+    return pd.read_csv(_paths()[name])
 
 
 def add_student(data: dict) -> int:
     with _write_lock:
-        return _add_student_unlocked(data)
+        df = _raw("students.csv")
+        new_id = int(df["student_id"].max()) + 1 if not df.empty else 1
+        row = {"student_id": new_id, "name": data.get("name") or f"Student {new_id:04d}", "gender": data["gender"],
+               "major": data["major"], "entry_semester": data["entry_semester"]}
+        _write("students.csv", pd.concat([df, pd.DataFrame([row])], ignore_index=True)[STUDENT_COLUMNS])
+        return new_id
 
 
 def update_student(student_id: int, data: dict) -> bool:
     with _write_lock:
-        return _update_student_unlocked(student_id, data)
+        df = _raw("students.csv")
+        idx = df.index[df["student_id"] == int(student_id)]
+        if idx.empty:
+            return False
+        for key in ("name", "gender", "major", "entry_semester"):
+            if key in data and data[key] not in (None, ""):
+                df.at[idx[0], key] = data[key]
+        _write("students.csv", df)
+        return True
 
 
 def delete_student(student_id: int) -> bool:
     with _write_lock:
-        return _delete_student_unlocked(student_id)
+        df = _raw("students.csv")
+        rest = df[df["student_id"] != int(student_id)]
+        if len(rest) == len(df):
+            return False
+        _write("students.csv", rest)
+        enr = _raw("enrollments.csv")
+        _write("enrollments.csv", enr[enr["student_id"] != int(student_id)])
+        return True
 
 
-# ── Aggregate statistics ─────────────────────────────────────────────────────
-
-def _known(df: pd.DataFrame) -> pd.DataFrame:
-    return df[df["fail"].notna()]
-
-
-def _fail_rate(frame: pd.DataFrame) -> float:
-    return round(float(frame["fail"].mean() * 100), 1) if len(frame) else 0.0
-
-
-def _group_rates(df: pd.DataFrame, column: str, order=None, min_size: int = 1) -> dict:
-    """Fail rate, size and mean GPA per group, over records whose final mark is known."""
-    df = _known(df)
-    groups = [(k, g) for k, g in df.groupby(column) if len(g) >= min_size]
-    if order:
-        groups.sort(key=lambda kg: order.index(kg[0]) if kg[0] in order else 99)
-    return {
-        "labels": [str(k) for k, _ in groups],
-        "fail_rate": [_fail_rate(g) for _, g in groups],
-        "avg_gpa": [round(float(g["gpa"].mean()), 2) for _, g in groups],
-        "size": [int(len(g)) for _, g in groups],
-    }
+def add_enrollment(data: dict) -> int:
+    with _write_lock:
+        df = _raw("enrollments.csv")
+        new_id = int(df["enrollment_id"].max()) + 1 if not df.empty else 1
+        row = {"enrollment_id": new_id, **{k: data.get(k) for k in ENROLLMENT_COLUMNS[1:]}}
+        _write("enrollments.csv", pd.concat([df, pd.DataFrame([row])], ignore_index=True)[ENROLLMENT_COLUMNS])
+        return new_id
 
 
-def _gpa_band(series: pd.Series) -> pd.Series:
-    return pd.cut(series, [-0.01, 0.49, 0.99, 1.49, 1.99, 4.01], labels=GPA_BANDS).astype(str)
+def update_enrollment(enrollment_id: int, data: dict) -> bool:
+    with _write_lock:
+        df = _raw("enrollments.csv")
+        idx = df.index[df["enrollment_id"] == int(enrollment_id)]
+        if idx.empty:
+            return False
+        for key in ("mark", "attendance", "status"):
+            if key in data:
+                df.at[idx[0], key] = data[key]
+        _write("enrollments.csv", df)
+        return True
 
 
-def get_dashboard_stats() -> dict:
-    """Summary numbers and chart data for the dashboard."""
-    df = load_students()
-    if df.empty:
-        return {}
-    known = _known(df)
-    stats = {
-        "total_students": len(df),
-        "distinct_students": int(df["person_id"].nunique()),
-        "passed": int((df["result"] == "Pass").sum()),
-        "failed": int((df["result"] == "Fail").sum()),
-        "in_progress": int((df["result"] == "In progress").sum()),
-        "fail_rate": _fail_rate(known),
-        "avg_gpa": round(float(df["gpa"].mean()), 2),
-        "avg_absences": round(float(df["absences"].mean()), 1),
-        "at_risk_count": int(df["at_risk"].sum()),
-    }
-    stats["result_counts"] = {r: int((df["result"] == r).sum()) for r in RESULTS if (df["result"] == r).any()}
-    dist = df["letter"].value_counts().reindex([b[1] for b in grading.GRADE_SCALE], fill_value=0)
-    stats["letter_distribution"] = {k: int(v) for k, v in dist.items()}
-
-    def mean_of(frame, col):
-        value = frame[col].mean()
-        return 0.0 if pd.isna(value) else round(float(value), 1)
-
-    stats["term_means"] = {
-        r: [mean_of(known[known.result == r], c) for c in ("t1_mark", "t2_mark", "final_mark")]
-        for r in ("Pass", "Fail") if (known.result == r).any()
-    }
-    by_gpa = _group_rates(df.assign(band=_gpa_band(df["gpa"])), "band", order=GPA_BANDS)
-    stats["gpa_band"] = by_gpa
-    stats["course"] = _group_rates(df, "course")
-    stats["scale"] = grading.scale_table()
-    return stats
-
-
-def get_analytics_data() -> dict:
-    """Chart data for the analytics page."""
-    df = load_students()
-    if df.empty:
-        return {}
-    data = {}
-    data["gpa_band"] = _group_rates(df.assign(band=_gpa_band(df["gpa"])), "band", order=GPA_BANDS)
-    data["absences"] = _group_rates(df, "absence_band", order=[b[2] for b in grading.ABSENCE_BANDS])
-    data["course"] = _group_rates(df, "course")
-    trend_order = ["Dropping (-5 or more)", "Slipping (-2 to -5)", "Stable", "Improving (+2 or more)"]
-    trend = pd.cut(df["trend"], [-101, -5, -2, 1.99, 101], labels=trend_order, right=False).astype(str)
-    data["trend"] = _group_rates(df.assign(band=trend), "band", order=trend_order)
-    t1_order = ["Under 40", "40-49", "50-59", "60-69", "70+"]
-    t1 = pd.cut(df["t1_mark"], [-1, 39.99, 49.99, 59.99, 69.99, 101], labels=t1_order).astype(str)
-    data["term1"] = _group_rates(df.assign(band=t1), "band", order=t1_order)
-
-    edges = np.arange(0, 4.5, 0.5)
-    counts, _ = np.histogram(df["gpa"], bins=np.append(edges, 4.01))
-    data["gpa_hist_labels"] = [f"{a:.1f}-{a + 0.5:.1f}" if a < 4 else "4.0" for a in edges]
-    data["gpa_hist_values"] = counts.tolist()
-
-    sample = _known(df).sample(n=min(300, len(_known(df))), random_state=1)
-    data["scatter_t1"] = sample["t1_mark"].tolist()
-    data["scatter_final"] = sample["final_mark"].tolist()
-    data["scatter_fail"] = sample["fail"].astype(int).tolist()
-
-    cols = ["student_id", "name", "course", "gpa", "standing"]
-    data["top"] = df.nlargest(5, ["gpa", "avg_mark"])[cols].to_dict("records")
-    data["bottom"] = df.nsmallest(5, ["gpa", "avg_mark"])[cols].to_dict("records")
-    return data
+def delete_enrollment(enrollment_id: int) -> bool:
+    with _write_lock:
+        df = _raw("enrollments.csv")
+        rest = df[df["enrollment_id"] != int(enrollment_id)]
+        if len(rest) == len(df):
+            return False
+        _write("enrollments.csv", rest)
+        return True

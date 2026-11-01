@@ -1,49 +1,11 @@
-{# The explainable report: summary, risk, suggestions, calculations with formulas. Expects student, indicators, suggestions, ml #}
-{% set ind = indicators %}
 <div class="row g-3">
-  <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body">
-    <div class="stat-value">{{ '%.2f'|format(ind.gpa) if ind.gpa is not none else '-' }}<small class="text-muted fs-6"> / 4</small></div><div class="stat-label">GPA</div></div></div></div>
-  <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body">
-    <div class="stat-value">{{ ind.avg_mark }}% <small class="fs-6">{{ ind.grade.letter }}</small></div><div class="stat-label">Average mark</div></div></div></div>
-  <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body">
-    <div class="stat-value fs-5">{{ ind.standing }}</div><div class="stat-label">Academic standing</div></div></div></div>
-  <div class="col-md-3 col-6"><div class="card stat-card h-100"><div class="card-body">
-    {% if ml %}<div class="stat-value {{ 'text-danger' if ml.level == 'High' else 'text-warning' if ml.level == 'Medium' else 'text-success' }}">{{ ml.p_fail|round(0)|int }}%</div>
-    <div class="stat-label">Risk of failing - {{ ml.level }}</div>
-    <div class="risk-meter mt-2"><div class="pin" style="left: {{ [ml.p_fail, 99]|min }}%"></div></div>
-    {% else %}<div class="stat-value">-</div><div class="stat-label">Risk of failing</div>{% endif %}</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-value">{{ ('%.2f'|format(student.cgpa)) if student.cgpa == student.cgpa else '-' }}</div><div class="stat-label">CGPA</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-value">{{ ('%.2f'|format(student.lcgpa)) if student.lcgpa == student.lcgpa else '-' }}</div><div class="stat-label">LCGPA (latest attempts)</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-value">{{ student.earned|int }} / {{ student.attempted|int }}</div><div class="stat-label">Credits earned / attempted</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-value fs-5">{{ student.standing }}</div><div class="stat-label">Academic standing · {{ student.withdrawals|int }} W · {{ student.repeats|int }} repeats</div></div></div></div>
 </div>
-
-{% if ml %}
-<div class="card mt-3"><div class="card-body small">
-  <strong>How the risk was estimated.</strong> The {{ ml.model }} model ({{ ml.scenario_label|lower }} data) gives {{ ml.p_fail }}%.
-  {% if ml.factors.raises %}Raising the risk: {% for n, v in ml.factors.raises %}<span class="badge bg-danger-subtle text-danger">{{ n }}</span> {% endfor %}{% endif %}
-  {% if ml.factors.lowers %}Lowering it: {% for n, v in ml.factors.lowers %}<span class="badge bg-success-subtle text-success">{{ n }}</span> {% endfor %}{% endif %}
-  {% if ml.projected_final is not none %}<br />Projected final mark: <strong>{{ ml.projected_final }}%</strong> ({{ ml.projection_model }}).{% endif %}
-  <br /><span class="text-muted">An early-warning estimate from past students, not a verdict. See the Model Selection page for how accurate it is.</span>
-</div></div>
-{% endif %}
-
-<h5 class="mt-4">Suggestions</h5>
-<div class="row g-3">
-  {% for s in suggestions %}
-  <div class="col-12"><div class="card sugg-{{ s.priority }}"><div class="card-body py-3">
-    <div class="d-flex justify-content-between"><strong>{{ s.title }}</strong>
-      <span class="badge {{ {'high': 'bg-danger', 'medium': 'bg-warning text-dark', 'low': 'bg-info text-dark', 'good': 'bg-success'}[s.priority] }}">{{ s.priority }}</span></div>
-    <div>{{ s.text }}</div>
-    <div class="small text-muted mt-1"><i class="fa-solid fa-calculator me-1"></i>Because: <code>{{ s.why }}</code></div>
-  </div></div></div>
-  {% endfor %}
-</div>
-
-<h5 class="mt-4">Calculations and formulas</h5>
-<div class="row g-3">
-  {% for c in ind.calculations %}
-  <div class="col-lg-6"><div class="card calc-card h-100"><div class="card-body">
-    <div class="d-flex justify-content-between"><strong>{{ c.title }}</strong><span class="fw-semibold">{{ c.value }}</span></div>
-    <div class="formula mt-1">{{ c.formula }}</div>
-    <div class="working mt-1">{{ c.working }}</div>
-    <div class="small text-muted mt-1">{{ c.meaning }}</div>
-  </div></div></div>
-  {% endfor %}
-</div>
+<h5 class="mt-4">Plan for {{ current_semester }}</h5>
+{% if plan %}{% include "_plan.html" %}
+{% else %}<div class="alert alert-secondary">No courses in progress, so there is nothing to plan.</div>{% endif %}
+<h5 class="mt-4">Transcript</h5>
+{% set staff = is_staff and not report_mode %}{% include "_transcript.html" %}

@@ -1,10 +1,12 @@
 """
 Prediction interface used by the web app.
 
-The offline study (app/ml/model_selection.py) chooses the model and its settings and stores
-them in app/ml/model_selection.json. Here the chosen models are fitted on the current data
-(a second or two) and cached. Quality figures always come from the study, which used
-cross-validation on the original dataset; they are not recomputed on every request.
+The offline study (app/ml/model_selection.py) chooses the model and its settings and stores them in
+app/ml/model_selection.json. Here the chosen models are fitted on the current data (a few seconds)
+and cached; quality figures always come from the study, not from the live fit.
+
+For every course attempt the models give a predicted final mark and the probability of failing
+(grade below C), at two moments: "planning" (no attendance yet) and "during" (with attendance %).
 """
 
 import json
@@ -14,21 +16,16 @@ import threading
 import numpy as np
 from sklearn.pipeline import make_pipeline
 
-from app.data.data_loader import load_students
+from app.data.data_loader import load_tables
 from app.ml.preprocessing import (
-    SCENARIOS, build_preprocessor, prepare_classification, prepare_regression, record_to_frame,
+    SCENARIOS, build_course_frame, build_preprocessor, prepare_classification, prepare_regression, records_to_frame,
 )
 from app.ml.registry import CLASSIFIERS, REGRESSORS, build_estimator
 
-MIN_STUDENTS = 100
+MIN_ROWS = 300
 SELECTION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model_selection.json")
 
-FEATURE_LABELS = {
-    "t1_mark": "Term 1 mark", "t2_mark": "Term 2 mark", "trend": "Change from term 1 to term 2",
-    "absences": "Absences", "course": "Course",
-}
-
-_model_cache = None
+_cache = {"tables": None, "models": None, "frame": None}
 _selection_cache = None
 _lock = threading.Lock()
 
@@ -45,7 +42,7 @@ def load_selection() -> dict:
     return _selection_cache
 
 
-def _params(block: dict) -> dict:
+def _params(block) -> dict:
     return {k: (tuple(v) if isinstance(v, list) else v) for k, v in (block or {}).get("selected_params", {}).items()}
 
 
@@ -53,94 +50,80 @@ def _pipeline(scenario, registry, key, params=None):
     return make_pipeline(build_preprocessor(scenario), build_estimator(registry, key, params))
 
 
+def get_frame():
+    """The course-attempt frame behind the current tables (cached together with the models)."""
+    _get_models()
+    return _cache["frame"]
+
+
 def _get_models():
-    """Fit (once) and return the live models, or None when there is too little data."""
-    global _model_cache
-    if _model_cache is not None:
-        return _model_cache
+    """Fit (once per data version) and return the live models, or None when there is too little data."""
+    tables = load_tables()
+    if _cache["tables"] is tables and _cache["models"] is not None:
+        return _cache["models"]
     with _lock:
-        if _model_cache is not None:
-            return _model_cache
-        df = load_students()
-        if df.empty or df["fail"].notna().sum() < MIN_STUDENTS or df["fail"].nunique() < 2:
+        tables = load_tables()
+        if _cache["tables"] is tables and _cache["models"] is not None:
+            return _cache["models"]
+        if tables.empty:
+            return None
+        frame = build_course_frame(tables)
+        if int((frame["attempted"] > 0).sum()) < MIN_ROWS:
             return None
         study = load_selection()
-        models = {"classifier": {}, "explainer": {}, "regressor": {}, "n": int(df["fail"].notna().sum())}
+        models = {"classifier": {}, "regressor": {}}
         for scenario in SCENARIOS:
-            X, y, _ = prepare_classification(df, scenario)
+            X, y, _ = prepare_classification(frame, scenario)
             block = study.get("classification", {}).get(scenario)
             key = block["selected"] if block else "logistic"
-            params = _params(block) if block else {}
-            models["classifier"][scenario] = {
-                "key": key, "label": CLASSIFIERS[key][0],
-                "pipeline": _pipeline(scenario, CLASSIFIERS, key, params).fit(X, y),
-            }
-            models["explainer"][scenario] = _pipeline(scenario, CLASSIFIERS, "logistic").fit(X, y)
-            reg_block = study.get("regression", {}).get(scenario)
-            rkey = reg_block["selected"] if reg_block else "ridge"
-            Xr, yr, _ = prepare_regression(df, scenario)
-            models["regressor"][scenario] = {
-                "key": rkey, "label": REGRESSORS[rkey][0],
-                "pipeline": _pipeline(scenario, REGRESSORS, rkey, _params(reg_block) if reg_block else {}).fit(Xr, yr),
-            }
-        _model_cache = models
-        return _model_cache
+            models["classifier"][scenario] = {"key": key, "label": CLASSIFIERS[key][0],
+                                              "pipeline": _pipeline(scenario, CLASSIFIERS, key, _params(block)).fit(X, y)}
+            Xr, yr, _ = prepare_regression(frame, scenario)
+            rblock = study.get("regression", {}).get(scenario)
+            rkey = rblock["selected"] if rblock else "ridge"
+            models["regressor"][scenario] = {"key": rkey, "label": REGRESSORS[rkey][0],
+                                             "pipeline": _pipeline(scenario, REGRESSORS, rkey, _params(rblock)).fit(Xr, yr)}
+        _cache.update(tables=tables, models=models, frame=frame)
+        return models
 
 
 def invalidate_cache():
-    """Call whenever student data changes so the live models refit on the next request."""
-    global _model_cache
-    with _lock:
-        _model_cache = None
+    """Call whenever data changes so the live models refit on the next request."""
+    _cache.update(tables=None, models=None, frame=None)
 
 
 def get_training_size() -> int:
     models = _get_models()
-    return models["n"] if models else 0
+    return int((_cache["frame"]["attempted"] > 0).sum()) if models else 0
 
 
-def risk_level(p_fail: float) -> str:
-    return "High" if p_fail >= 50 else "Medium" if p_fail >= 25 else "Low"
+def regression_sd(scenario: str = "during") -> float:
+    """Typical error (RMSE, in marks) of the selected regression model, from the study."""
+    block = load_selection().get("regression", {}).get(scenario)
+    if block:
+        chosen = next((c for c in block["tuned"] if c["key"] == block["selected"]), None)
+        if chosen and chosen["metrics"]["rmse"]["mean"]:
+            return float(chosen["metrics"]["rmse"]["mean"])
+    return 8.0
 
 
-def _factors(explainer, X, scenario, top=3) -> dict:
-    """Which inputs push this student's risk up or down (logistic-regression contributions)."""
-    pre, clf = explainer.steps[0][1], explainer.steps[-1][1]
-    row = pre.transform(X)[0]
-    names = pre.get_feature_names_out()
-    cats = SCENARIOS[scenario]["categorical"]
-    totals = {}
-    for name, value, coef in zip(names, row, clf.coef_[0]):
-        bare = name.split("__", 1)[1]
-        feature = next((c for c in cats if bare.startswith(c + "_")), bare)
-        totals[feature] = totals.get(feature, 0.0) + float(value) * float(coef)
-    ranked = sorted(totals.items(), key=lambda kv: kv[1])
-    up = [(FEATURE_LABELS.get(f, f), round(v, 2)) for f, v in reversed(ranked) if v > 0.05][:top]
-    down = [(FEATURE_LABELS.get(f, f), round(-v, 2)) for f, v in ranked if v < -0.05][:top]
-    return {"raises": up, "lowers": down}
-
-
-def predict_student(record: dict) -> dict:
-    """Probability of failing the course (and the projected final mark) for one record."""
+def model_labels(scenario: str = "during") -> dict:
     models = _get_models()
-    if models is None:
-        return {"error": f"Not enough data to train the models (need at least {MIN_STUDENTS} records)."}
+    if not models:
+        return {}
+    return {"classifier": models["classifier"][scenario]["label"], "regressor": models["regressor"][scenario]["label"]}
 
-    t2 = record.get("t2_mark")
-    has_t2 = t2 is not None and t2 == t2 and t2 != ""
-    scenario = "after_term2" if has_t2 else "after_term1"
-    X = record_to_frame(record, scenario)
+
+def predict_courses(records: list, scenario: str = "during"):
+    """List of {mark, p_fail} (one per record), or None when there is not enough data."""
+    models = _get_models()
+    if models is None or not records:
+        return None if models is None else []
+    X = records_to_frame(records, scenario)
+    marks = models["regressor"][scenario]["pipeline"].predict(X)
     pipe = models["classifier"][scenario]["pipeline"]
     if hasattr(pipe, "predict_proba"):
-        p = float(pipe.predict_proba(X)[0][1])
+        p = pipe.predict_proba(X)[:, 1]
     else:
-        p = float(1 / (1 + np.exp(-pipe.decision_function(X)[0])))
-    reg = models["regressor"][scenario]
-    mark = float(reg["pipeline"].predict(X)[0])
-    return {
-        "scenario": scenario, "scenario_label": SCENARIOS[scenario]["label"],
-        "model": models["classifier"][scenario]["label"],
-        "p_fail": round(p * 100, 1), "level": risk_level(p * 100),
-        "factors": _factors(models["explainer"][scenario], X, scenario),
-        "projected_final": round(min(100.0, max(0.0, mark)), 1), "projection_model": reg["label"],
-    }
+        p = 1 / (1 + np.exp(-pipe.decision_function(X)))
+    return [{"mark": float(np.clip(m, 0, 100)), "p_fail": float(q)} for m, q in zip(marks, p)]

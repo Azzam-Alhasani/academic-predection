@@ -6,7 +6,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.audit import log_event, recent_events
 from app.auth import ROLES, add_user, admin_required, current_user, delete_user, get_user, load_users, validate_password
-from app.data.data_loader import get_student_by_id
+from app.data.data_loader import get_student
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -32,7 +32,7 @@ def users_add():
         problem = "Choose a role."
     elif get_user(username) is not None:
         problem = "That username already exists."
-    elif role == "student" and not (student_id.isdigit() and get_student_by_id(int(student_id))):
+    elif role == "student" and not (student_id.isdigit() and get_student(int(student_id))):
         problem = "A student account needs the ID of an existing student record."
     else:
         problem = validate_password(password)
