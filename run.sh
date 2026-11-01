@@ -31,12 +31,7 @@ echo "[INFO] Installing dependencies..."
 pip install -r requirements.txt --quiet
 echo "[OK] Dependencies ready."
 
-# Build the real-student dataset if missing (from app/data/raw/*.csv)
-if [ ! -f "app/data/sample_students.csv" ]; then
-    echo "[INFO] Preparing the student dataset..."
-    python app/data/prepare_real_data.py
-    echo "[OK] Dataset ready."
-fi
+# The simulated transcript tables ship in app/data/sample/; regenerate with: python app/data/generate_students.py
 
 # First start creates a local login (admin / admin123) and prints it; change it in the app.
 

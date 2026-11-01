@@ -1,0 +1,851 @@
+student_id,name,gender,major,entry_semester
+1,Student 0001,Male,Engineering,2023 Fall
+2,Student 0002,Female,Design,2023 Fall
+3,Student 0003,Female,Applied Sciences,2023 Fall
+4,Student 0004,Female,Applied Sciences,2023 Fall
+5,Student 0005,Male,Engineering,2023 Fall
+6,Student 0006,Male,Engineering,2023 Fall
+7,Student 0007,Female,Business,2023 Fall
+8,Student 0008,Male,Information Technology,2023 Fall
+9,Student 0009,Female,Business,2023 Fall
+10,Student 0010,Female,Design,2023 Fall
+11,Student 0011,Male,Applied Sciences,2023 Fall
+12,Student 0012,Male,Information Technology,2023 Fall
+13,Student 0013,Female,Information Technology,2023 Fall
+14,Student 0014,Male,Business,2023 Fall
+15,Student 0015,Female,Applied Sciences,2023 Fall
+16,Student 0016,Female,Engineering,2023 Fall
+17,Student 0017,Female,Business,2023 Fall
+18,Student 0018,Female,Engineering,2023 Fall
+19,Student 0019,Female,Applied Sciences,2023 Fall
+20,Student 0020,Female,Business,2023 Fall
+21,Student 0021,Female,Business,2023 Fall
+22,Student 0022,Female,Applied Sciences,2023 Fall
+23,Student 0023,Male,Business,2023 Fall
+24,Student 0024,Male,Information Technology,2023 Fall
+25,Student 0025,Male,Applied Sciences,2023 Fall
+26,Student 0026,Female,Information Technology,2023 Fall
+27,Student 0027,Female,Business,2023 Fall
+28,Student 0028,Male,Design,2023 Fall
+29,Student 0029,Female,Information Technology,2023 Fall
+30,Student 0030,Female,Information Technology,2023 Fall
+31,Student 0031,Female,Information Technology,2023 Fall
+32,Student 0032,Female,Information Technology,2023 Fall
+33,Student 0033,Female,Applied Sciences,2023 Fall
+34,Student 0034,Female,Business,2023 Fall
+35,Student 0035,Male,Applied Sciences,2023 Fall
+36,Student 0036,Female,Engineering,2023 Fall
+37,Student 0037,Female,Applied Sciences,2023 Fall
+38,Student 0038,Male,Business,2023 Fall
+39,Student 0039,Female,Engineering,2023 Fall
+40,Student 0040,Female,Business,2023 Fall
+41,Student 0041,Male,Applied Sciences,2023 Fall
+42,Student 0042,Female,Applied Sciences,2023 Fall
+43,Student 0043,Male,Business,2023 Fall
+44,Student 0044,Female,Business,2023 Fall
+45,Student 0045,Male,Business,2023 Fall
+46,Student 0046,Female,Design,2023 Fall
+47,Student 0047,Female,Design,2023 Fall
+48,Student 0048,Female,Design,2023 Fall
+49,Student 0049,Female,Engineering,2023 Fall
+50,Student 0050,Male,Engineering,2023 Fall
+51,Student 0051,Female,Engineering,2023 Fall
+52,Student 0052,Male,Information Technology,2023 Fall
+53,Student 0053,Male,Information Technology,2023 Fall
+54,Student 0054,Male,Engineering,2023 Fall
+55,Student 0055,Female,Applied Sciences,2023 Fall
+56,Student 0056,Female,Information Technology,2023 Fall
+57,Student 0057,Female,Engineering,2023 Fall
+58,Student 0058,Female,Information Technology,2023 Fall
+59,Student 0059,Male,Information Technology,2023 Fall
+60,Student 0060,Female,Information Technology,2023 Fall
+61,Student 0061,Female,Information Technology,2023 Fall
+62,Student 0062,Male,Engineering,2023 Fall
+63,Student 0063,Female,Design,2023 Fall
+64,Student 0064,Female,Business,2023 Fall
+65,Student 0065,Male,Applied Sciences,2023 Fall
+66,Student 0066,Male,Business,2023 Fall
+67,Student 0067,Male,Business,2023 Fall
+68,Student 0068,Female,Engineering,2023 Fall
+69,Student 0069,Male,Information Technology,2023 Fall
+70,Student 0070,Female,Engineering,2023 Fall
+71,Student 0071,Female,Business,2023 Fall
+72,Student 0072,Male,Business,2023 Fall
+73,Student 0073,Female,Business,2023 Fall
+74,Student 0074,Male,Information Technology,2023 Fall
+75,Student 0075,Male,Engineering,2023 Fall
+76,Student 0076,Female,Business,2023 Fall
+77,Student 0077,Male,Business,2023 Fall
+78,Student 0078,Male,Information Technology,2023 Fall
+79,Student 0079,Male,Information Technology,2023 Fall
+80,Student 0080,Male,Engineering,2023 Fall
+81,Student 0081,Male,Engineering,2023 Fall
+82,Student 0082,Male,Business,2023 Fall
+83,Student 0083,Male,Business,2023 Fall
+84,Student 0084,Male,Engineering,2023 Fall
+85,Student 0085,Male,Applied Sciences,2023 Fall
+86,Student 0086,Male,Engineering,2023 Fall
+87,Student 0087,Female,Business,2023 Fall
+88,Student 0088,Male,Information Technology,2023 Fall
+89,Student 0089,Male,Business,2023 Fall
+90,Student 0090,Female,Business,2023 Fall
+91,Student 0091,Female,Business,2023 Fall
+92,Student 0092,Male,Business,2023 Fall
+93,Student 0093,Female,Business,2023 Fall
+94,Student 0094,Female,Business,2023 Fall
+95,Student 0095,Male,Applied Sciences,2023 Fall
+96,Student 0096,Male,Engineering,2023 Fall
+97,Student 0097,Female,Applied Sciences,2023 Fall
+98,Student 0098,Male,Business,2023 Fall
+99,Student 0099,Female,Design,2023 Fall
+100,Student 0100,Female,Applied Sciences,2023 Fall
+101,Student 0101,Male,Information Technology,2023 Fall
+102,Student 0102,Female,Engineering,2023 Fall
+103,Student 0103,Male,Information Technology,2023 Fall
+104,Student 0104,Female,Information Technology,2023 Fall
+105,Student 0105,Male,Information Technology,2023 Fall
+106,Student 0106,Female,Engineering,2023 Fall
+107,Student 0107,Female,Engineering,2023 Fall
+108,Student 0108,Male,Engineering,2023 Fall
+109,Student 0109,Male,Applied Sciences,2023 Fall
+110,Student 0110,Male,Information Technology,2023 Fall
+111,Student 0111,Female,Business,2023 Fall
+112,Student 0112,Male,Information Technology,2023 Fall
+113,Student 0113,Female,Business,2023 Fall
+114,Student 0114,Female,Engineering,2023 Fall
+115,Student 0115,Female,Engineering,2023 Fall
+116,Student 0116,Female,Applied Sciences,2023 Fall
+117,Student 0117,Male,Business,2023 Fall
+118,Student 0118,Male,Engineering,2023 Fall
+119,Student 0119,Male,Engineering,2023 Fall
+120,Student 0120,Female,Engineering,2023 Fall
+121,Student 0121,Female,Business,2023 Fall
+122,Student 0122,Male,Information Technology,2023 Fall
+123,Student 0123,Female,Design,2023 Fall
+124,Student 0124,Female,Information Technology,2023 Fall
+125,Student 0125,Male,Business,2023 Fall
+126,Student 0126,Female,Information Technology,2023 Fall
+127,Student 0127,Female,Business,2023 Fall
+128,Student 0128,Female,Engineering,2023 Fall
+129,Student 0129,Female,Applied Sciences,2023 Fall
+130,Student 0130,Female,Information Technology,2023 Fall
+131,Student 0131,Male,Information Technology,2023 Fall
+132,Student 0132,Female,Business,2023 Fall
+133,Student 0133,Male,Business,2023 Fall
+134,Student 0134,Female,Information Technology,2023 Fall
+135,Student 0135,Male,Engineering,2023 Fall
+136,Student 0136,Male,Information Technology,2023 Fall
+137,Student 0137,Male,Engineering,2023 Fall
+138,Student 0138,Male,Engineering,2023 Fall
+139,Student 0139,Female,Information Technology,2023 Fall
+140,Student 0140,Male,Engineering,2023 Fall
+141,Student 0141,Female,Business,2023 Fall
+142,Student 0142,Female,Business,2023 Fall
+143,Student 0143,Male,Information Technology,2023 Fall
+144,Student 0144,Male,Engineering,2023 Fall
+145,Student 0145,Female,Information Technology,2023 Fall
+146,Student 0146,Male,Design,2023 Fall
+147,Student 0147,Male,Engineering,2023 Fall
+148,Student 0148,Female,Engineering,2023 Fall
+149,Student 0149,Female,Business,2023 Fall
+150,Student 0150,Male,Engineering,2023 Fall
+151,Student 0151,Male,Applied Sciences,2024 Fall
+152,Student 0152,Female,Information Technology,2024 Fall
+153,Student 0153,Female,Business,2024 Fall
+154,Student 0154,Male,Engineering,2024 Fall
+155,Student 0155,Male,Information Technology,2024 Fall
+156,Student 0156,Male,Business,2024 Fall
+157,Student 0157,Male,Information Technology,2024 Fall
+158,Student 0158,Female,Design,2024 Fall
+159,Student 0159,Female,Information Technology,2024 Fall
+160,Student 0160,Male,Design,2024 Fall
+161,Student 0161,Female,Information Technology,2024 Fall
+162,Student 0162,Male,Business,2024 Fall
+163,Student 0163,Female,Business,2024 Fall
+164,Student 0164,Female,Information Technology,2024 Fall
+165,Student 0165,Female,Design,2024 Fall
+166,Student 0166,Female,Engineering,2024 Fall
+167,Student 0167,Male,Engineering,2024 Fall
+168,Student 0168,Female,Design,2024 Fall
+169,Student 0169,Male,Applied Sciences,2024 Fall
+170,Student 0170,Female,Engineering,2024 Fall
+171,Student 0171,Female,Information Technology,2024 Fall
+172,Student 0172,Male,Engineering,2024 Fall
+173,Student 0173,Male,Design,2024 Fall
+174,Student 0174,Female,Information Technology,2024 Fall
+175,Student 0175,Female,Information Technology,2024 Fall
+176,Student 0176,Male,Business,2024 Fall
+177,Student 0177,Male,Design,2024 Fall
+178,Student 0178,Female,Engineering,2024 Fall
+179,Student 0179,Female,Business,2024 Fall
+180,Student 0180,Male,Business,2024 Fall
+181,Student 0181,Female,Engineering,2024 Fall
+182,Student 0182,Female,Business,2024 Fall
+183,Student 0183,Female,Business,2024 Fall
+184,Student 0184,Male,Engineering,2024 Fall
+185,Student 0185,Female,Applied Sciences,2024 Fall
+186,Student 0186,Female,Design,2024 Fall
+187,Student 0187,Male,Applied Sciences,2024 Fall
+188,Student 0188,Male,Information Technology,2024 Fall
+189,Student 0189,Male,Engineering,2024 Fall
+190,Student 0190,Male,Engineering,2024 Fall
+191,Student 0191,Male,Business,2024 Fall
+192,Student 0192,Male,Applied Sciences,2024 Fall
+193,Student 0193,Male,Business,2024 Fall
+194,Student 0194,Male,Information Technology,2024 Fall
+195,Student 0195,Female,Engineering,2024 Fall
+196,Student 0196,Male,Business,2024 Fall
+197,Student 0197,Female,Business,2024 Fall
+198,Student 0198,Female,Information Technology,2024 Fall
+199,Student 0199,Female,Business,2024 Fall
+200,Student 0200,Male,Engineering,2024 Fall
+201,Student 0201,Female,Applied Sciences,2024 Fall
+202,Student 0202,Female,Design,2024 Fall
+203,Student 0203,Male,Engineering,2024 Fall
+204,Student 0204,Female,Applied Sciences,2024 Fall
+205,Student 0205,Male,Engineering,2024 Fall
+206,Student 0206,Female,Engineering,2024 Fall
+207,Student 0207,Female,Business,2024 Fall
+208,Student 0208,Female,Business,2024 Fall
+209,Student 0209,Male,Business,2024 Fall
+210,Student 0210,Female,Engineering,2024 Fall
+211,Student 0211,Female,Engineering,2024 Fall
+212,Student 0212,Female,Applied Sciences,2024 Fall
+213,Student 0213,Female,Business,2024 Fall
+214,Student 0214,Female,Engineering,2024 Fall
+215,Student 0215,Male,Applied Sciences,2024 Fall
+216,Student 0216,Female,Business,2024 Fall
+217,Student 0217,Female,Applied Sciences,2024 Fall
+218,Student 0218,Female,Engineering,2024 Fall
+219,Student 0219,Female,Engineering,2024 Fall
+220,Student 0220,Male,Engineering,2024 Fall
+221,Student 0221,Male,Information Technology,2024 Fall
+222,Student 0222,Female,Engineering,2024 Fall
+223,Student 0223,Female,Information Technology,2024 Fall
+224,Student 0224,Female,Engineering,2024 Fall
+225,Student 0225,Female,Information Technology,2024 Fall
+226,Student 0226,Female,Engineering,2024 Fall
+227,Student 0227,Male,Design,2024 Fall
+228,Student 0228,Female,Business,2024 Fall
+229,Student 0229,Female,Engineering,2024 Fall
+230,Student 0230,Male,Information Technology,2024 Fall
+231,Student 0231,Female,Engineering,2024 Fall
+232,Student 0232,Female,Engineering,2024 Fall
+233,Student 0233,Female,Applied Sciences,2024 Fall
+234,Student 0234,Female,Applied Sciences,2024 Fall
+235,Student 0235,Male,Business,2024 Fall
+236,Student 0236,Male,Applied Sciences,2024 Fall
+237,Student 0237,Female,Information Technology,2024 Fall
+238,Student 0238,Male,Business,2024 Fall
+239,Student 0239,Female,Applied Sciences,2024 Fall
+240,Student 0240,Female,Information Technology,2024 Fall
+241,Student 0241,Male,Engineering,2024 Fall
+242,Student 0242,Male,Information Technology,2024 Fall
+243,Student 0243,Male,Design,2024 Fall
+244,Student 0244,Male,Business,2024 Fall
+245,Student 0245,Male,Design,2024 Fall
+246,Student 0246,Male,Information Technology,2024 Fall
+247,Student 0247,Male,Information Technology,2024 Fall
+248,Student 0248,Male,Information Technology,2024 Fall
+249,Student 0249,Female,Engineering,2024 Fall
+250,Student 0250,Male,Design,2024 Fall
+251,Student 0251,Male,Engineering,2024 Fall
+252,Student 0252,Female,Design,2024 Fall
+253,Student 0253,Female,Information Technology,2024 Fall
+254,Student 0254,Female,Business,2024 Fall
+255,Student 0255,Female,Information Technology,2024 Fall
+256,Student 0256,Female,Business,2024 Fall
+257,Student 0257,Male,Applied Sciences,2024 Fall
+258,Student 0258,Male,Information Technology,2024 Fall
+259,Student 0259,Female,Engineering,2024 Fall
+260,Student 0260,Female,Engineering,2024 Fall
+261,Student 0261,Female,Engineering,2024 Fall
+262,Student 0262,Female,Business,2024 Fall
+263,Student 0263,Male,Business,2024 Fall
+264,Student 0264,Male,Applied Sciences,2024 Fall
+265,Student 0265,Female,Information Technology,2024 Fall
+266,Student 0266,Male,Design,2024 Fall
+267,Student 0267,Female,Applied Sciences,2024 Fall
+268,Student 0268,Female,Business,2024 Fall
+269,Student 0269,Male,Business,2024 Fall
+270,Student 0270,Male,Design,2024 Fall
+271,Student 0271,Female,Applied Sciences,2024 Fall
+272,Student 0272,Male,Information Technology,2024 Fall
+273,Student 0273,Male,Engineering,2024 Fall
+274,Student 0274,Male,Engineering,2024 Fall
+275,Student 0275,Female,Business,2024 Fall
+276,Student 0276,Female,Applied Sciences,2024 Fall
+277,Student 0277,Female,Engineering,2024 Fall
+278,Student 0278,Female,Business,2024 Fall
+279,Student 0279,Male,Information Technology,2024 Fall
+280,Student 0280,Male,Engineering,2024 Fall
+281,Student 0281,Male,Information Technology,2024 Fall
+282,Student 0282,Male,Applied Sciences,2024 Fall
+283,Student 0283,Male,Applied Sciences,2024 Fall
+284,Student 0284,Female,Business,2024 Fall
+285,Student 0285,Male,Design,2024 Fall
+286,Student 0286,Female,Engineering,2024 Fall
+287,Student 0287,Male,Engineering,2024 Fall
+288,Student 0288,Male,Engineering,2024 Fall
+289,Student 0289,Male,Applied Sciences,2024 Fall
+290,Student 0290,Female,Business,2024 Fall
+291,Student 0291,Male,Design,2024 Fall
+292,Student 0292,Female,Business,2024 Fall
+293,Student 0293,Male,Design,2024 Fall
+294,Student 0294,Female,Business,2024 Fall
+295,Student 0295,Female,Engineering,2024 Fall
+296,Student 0296,Male,Engineering,2024 Fall
+297,Student 0297,Male,Business,2024 Fall
+298,Student 0298,Female,Engineering,2024 Fall
+299,Student 0299,Male,Business,2024 Fall
+300,Student 0300,Male,Engineering,2024 Fall
+301,Student 0301,Male,Applied Sciences,2024 Fall
+302,Student 0302,Female,Business,2024 Fall
+303,Student 0303,Male,Engineering,2024 Fall
+304,Student 0304,Female,Engineering,2024 Fall
+305,Student 0305,Male,Engineering,2024 Fall
+306,Student 0306,Female,Information Technology,2024 Fall
+307,Student 0307,Female,Information Technology,2024 Fall
+308,Student 0308,Male,Applied Sciences,2024 Fall
+309,Student 0309,Female,Design,2024 Fall
+310,Student 0310,Female,Design,2024 Fall
+311,Student 0311,Male,Engineering,2024 Fall
+312,Student 0312,Male,Information Technology,2024 Fall
+313,Student 0313,Female,Applied Sciences,2024 Fall
+314,Student 0314,Male,Information Technology,2024 Fall
+315,Student 0315,Male,Engineering,2024 Fall
+316,Student 0316,Male,Information Technology,2024 Fall
+317,Student 0317,Female,Design,2024 Fall
+318,Student 0318,Male,Engineering,2024 Fall
+319,Student 0319,Female,Information Technology,2024 Fall
+320,Student 0320,Female,Business,2024 Fall
+321,Student 0321,Female,Business,2024 Fall
+322,Student 0322,Female,Information Technology,2024 Fall
+323,Student 0323,Female,Applied Sciences,2024 Fall
+324,Student 0324,Male,Design,2024 Fall
+325,Student 0325,Male,Applied Sciences,2024 Fall
+326,Student 0326,Female,Design,2024 Fall
+327,Student 0327,Male,Business,2024 Fall
+328,Student 0328,Female,Design,2024 Fall
+329,Student 0329,Male,Applied Sciences,2024 Fall
+330,Student 0330,Female,Business,2024 Fall
+331,Student 0331,Male,Information Technology,2024 Fall
+332,Student 0332,Female,Applied Sciences,2024 Fall
+333,Student 0333,Male,Engineering,2024 Fall
+334,Student 0334,Female,Engineering,2024 Fall
+335,Student 0335,Female,Information Technology,2024 Fall
+336,Student 0336,Female,Applied Sciences,2024 Fall
+337,Student 0337,Male,Information Technology,2024 Fall
+338,Student 0338,Female,Engineering,2024 Fall
+339,Student 0339,Male,Engineering,2024 Fall
+340,Student 0340,Male,Business,2024 Fall
+341,Student 0341,Female,Information Technology,2024 Fall
+342,Student 0342,Male,Engineering,2024 Fall
+343,Student 0343,Male,Applied Sciences,2024 Fall
+344,Student 0344,Male,Applied Sciences,2024 Fall
+345,Student 0345,Female,Information Technology,2024 Fall
+346,Student 0346,Female,Information Technology,2024 Fall
+347,Student 0347,Male,Design,2024 Fall
+348,Student 0348,Female,Business,2024 Fall
+349,Student 0349,Female,Information Technology,2024 Fall
+350,Student 0350,Female,Engineering,2024 Fall
+351,Student 0351,Female,Business,2024 Fall
+352,Student 0352,Male,Engineering,2024 Fall
+353,Student 0353,Male,Business,2024 Fall
+354,Student 0354,Female,Information Technology,2024 Fall
+355,Student 0355,Male,Business,2024 Fall
+356,Student 0356,Male,Business,2024 Fall
+357,Student 0357,Male,Business,2024 Fall
+358,Student 0358,Male,Information Technology,2024 Fall
+359,Student 0359,Female,Business,2024 Fall
+360,Student 0360,Female,Engineering,2024 Fall
+361,Student 0361,Male,Applied Sciences,2024 Fall
+362,Student 0362,Male,Business,2024 Fall
+363,Student 0363,Male,Design,2024 Fall
+364,Student 0364,Male,Information Technology,2024 Fall
+365,Student 0365,Male,Information Technology,2024 Fall
+366,Student 0366,Male,Business,2024 Fall
+367,Student 0367,Female,Applied Sciences,2024 Fall
+368,Student 0368,Male,Business,2024 Fall
+369,Student 0369,Male,Engineering,2024 Fall
+370,Student 0370,Male,Engineering,2024 Fall
+371,Student 0371,Female,Information Technology,2024 Fall
+372,Student 0372,Male,Engineering,2024 Fall
+373,Student 0373,Male,Design,2024 Fall
+374,Student 0374,Male,Engineering,2024 Fall
+375,Student 0375,Male,Design,2024 Fall
+376,Student 0376,Female,Business,2024 Fall
+377,Student 0377,Male,Applied Sciences,2024 Fall
+378,Student 0378,Male,Design,2024 Fall
+379,Student 0379,Female,Information Technology,2024 Fall
+380,Student 0380,Male,Engineering,2024 Fall
+381,Student 0381,Male,Engineering,2024 Fall
+382,Student 0382,Male,Engineering,2024 Fall
+383,Student 0383,Male,Business,2024 Fall
+384,Student 0384,Female,Business,2024 Fall
+385,Student 0385,Male,Engineering,2024 Fall
+386,Student 0386,Male,Information Technology,2024 Fall
+387,Student 0387,Male,Business,2024 Fall
+388,Student 0388,Male,Information Technology,2024 Fall
+389,Student 0389,Female,Information Technology,2024 Fall
+390,Student 0390,Male,Engineering,2024 Fall
+391,Student 0391,Female,Engineering,2024 Fall
+392,Student 0392,Female,Information Technology,2024 Fall
+393,Student 0393,Male,Information Technology,2024 Fall
+394,Student 0394,Male,Engineering,2024 Fall
+395,Student 0395,Female,Information Technology,2024 Fall
+396,Student 0396,Male,Business,2024 Fall
+397,Student 0397,Male,Business,2024 Fall
+398,Student 0398,Male,Business,2024 Fall
+399,Student 0399,Male,Design,2024 Fall
+400,Student 0400,Female,Applied Sciences,2024 Fall
+401,Student 0401,Male,Applied Sciences,2024 Fall
+402,Student 0402,Female,Information Technology,2024 Fall
+403,Student 0403,Male,Engineering,2024 Fall
+404,Student 0404,Female,Engineering,2024 Fall
+405,Student 0405,Female,Engineering,2024 Fall
+406,Student 0406,Female,Information Technology,2024 Fall
+407,Student 0407,Female,Business,2024 Fall
+408,Student 0408,Male,Engineering,2024 Fall
+409,Student 0409,Male,Information Technology,2024 Fall
+410,Student 0410,Male,Engineering,2024 Fall
+411,Student 0411,Male,Design,2025 Fall
+412,Student 0412,Male,Business,2025 Fall
+413,Student 0413,Female,Design,2025 Fall
+414,Student 0414,Male,Design,2025 Fall
+415,Student 0415,Male,Information Technology,2025 Fall
+416,Student 0416,Female,Engineering,2025 Fall
+417,Student 0417,Male,Applied Sciences,2025 Fall
+418,Student 0418,Female,Information Technology,2025 Fall
+419,Student 0419,Male,Engineering,2025 Fall
+420,Student 0420,Female,Engineering,2025 Fall
+421,Student 0421,Female,Engineering,2025 Fall
+422,Student 0422,Female,Engineering,2025 Fall
+423,Student 0423,Female,Design,2025 Fall
+424,Student 0424,Male,Information Technology,2025 Fall
+425,Student 0425,Male,Business,2025 Fall
+426,Student 0426,Female,Engineering,2025 Fall
+427,Student 0427,Male,Business,2025 Fall
+428,Student 0428,Female,Applied Sciences,2025 Fall
+429,Student 0429,Female,Business,2025 Fall
+430,Student 0430,Female,Information Technology,2025 Fall
+431,Student 0431,Female,Engineering,2025 Fall
+432,Student 0432,Female,Business,2025 Fall
+433,Student 0433,Male,Applied Sciences,2025 Fall
+434,Student 0434,Male,Information Technology,2025 Fall
+435,Student 0435,Female,Engineering,2025 Fall
+436,Student 0436,Female,Information Technology,2025 Fall
+437,Student 0437,Female,Engineering,2025 Fall
+438,Student 0438,Male,Engineering,2025 Fall
+439,Student 0439,Male,Engineering,2025 Fall
+440,Student 0440,Female,Information Technology,2025 Fall
+441,Student 0441,Female,Engineering,2025 Fall
+442,Student 0442,Female,Design,2025 Fall
+443,Student 0443,Female,Information Technology,2025 Fall
+444,Student 0444,Female,Applied Sciences,2025 Fall
+445,Student 0445,Female,Engineering,2025 Fall
+446,Student 0446,Male,Engineering,2025 Fall
+447,Student 0447,Female,Business,2025 Fall
+448,Student 0448,Male,Information Technology,2025 Fall
+449,Student 0449,Female,Business,2025 Fall
+450,Student 0450,Male,Information Technology,2025 Fall
+451,Student 0451,Male,Information Technology,2025 Fall
+452,Student 0452,Female,Applied Sciences,2025 Fall
+453,Student 0453,Female,Information Technology,2025 Fall
+454,Student 0454,Female,Engineering,2025 Fall
+455,Student 0455,Female,Applied Sciences,2025 Fall
+456,Student 0456,Female,Applied Sciences,2025 Fall
+457,Student 0457,Male,Applied Sciences,2025 Fall
+458,Student 0458,Female,Engineering,2025 Fall
+459,Student 0459,Female,Business,2025 Fall
+460,Student 0460,Male,Applied Sciences,2025 Fall
+461,Student 0461,Female,Information Technology,2025 Fall
+462,Student 0462,Male,Business,2025 Fall
+463,Student 0463,Male,Engineering,2025 Fall
+464,Student 0464,Female,Engineering,2025 Fall
+465,Student 0465,Male,Business,2025 Fall
+466,Student 0466,Male,Business,2025 Fall
+467,Student 0467,Male,Business,2025 Fall
+468,Student 0468,Male,Design,2025 Fall
+469,Student 0469,Male,Engineering,2025 Fall
+470,Student 0470,Female,Business,2025 Fall
+471,Student 0471,Male,Information Technology,2025 Fall
+472,Student 0472,Female,Business,2025 Fall
+473,Student 0473,Male,Business,2025 Fall
+474,Student 0474,Male,Engineering,2025 Fall
+475,Student 0475,Male,Applied Sciences,2025 Fall
+476,Student 0476,Female,Business,2025 Fall
+477,Student 0477,Male,Engineering,2025 Fall
+478,Student 0478,Male,Applied Sciences,2025 Fall
+479,Student 0479,Female,Applied Sciences,2025 Fall
+480,Student 0480,Male,Business,2025 Fall
+481,Student 0481,Female,Engineering,2025 Fall
+482,Student 0482,Female,Engineering,2025 Fall
+483,Student 0483,Male,Business,2025 Fall
+484,Student 0484,Female,Design,2025 Fall
+485,Student 0485,Male,Applied Sciences,2025 Fall
+486,Student 0486,Female,Engineering,2025 Fall
+487,Student 0487,Male,Business,2025 Fall
+488,Student 0488,Male,Business,2025 Fall
+489,Student 0489,Female,Business,2025 Fall
+490,Student 0490,Male,Applied Sciences,2025 Fall
+491,Student 0491,Female,Business,2025 Fall
+492,Student 0492,Female,Information Technology,2025 Fall
+493,Student 0493,Male,Information Technology,2025 Fall
+494,Student 0494,Female,Business,2025 Fall
+495,Student 0495,Male,Design,2025 Fall
+496,Student 0496,Female,Applied Sciences,2025 Fall
+497,Student 0497,Female,Engineering,2025 Fall
+498,Student 0498,Male,Applied Sciences,2025 Fall
+499,Student 0499,Male,Business,2025 Fall
+500,Student 0500,Male,Business,2025 Fall
+501,Student 0501,Female,Information Technology,2025 Fall
+502,Student 0502,Female,Business,2025 Fall
+503,Student 0503,Male,Engineering,2025 Fall
+504,Student 0504,Female,Information Technology,2025 Fall
+505,Student 0505,Female,Engineering,2025 Fall
+506,Student 0506,Female,Information Technology,2025 Fall
+507,Student 0507,Female,Business,2025 Fall
+508,Student 0508,Female,Engineering,2025 Fall
+509,Student 0509,Female,Engineering,2025 Fall
+510,Student 0510,Female,Design,2025 Fall
+511,Student 0511,Male,Engineering,2025 Fall
+512,Student 0512,Male,Engineering,2025 Fall
+513,Student 0513,Female,Information Technology,2025 Fall
+514,Student 0514,Male,Information Technology,2025 Fall
+515,Student 0515,Female,Information Technology,2025 Fall
+516,Student 0516,Female,Information Technology,2025 Fall
+517,Student 0517,Male,Information Technology,2025 Fall
+518,Student 0518,Female,Design,2025 Fall
+519,Student 0519,Female,Applied Sciences,2025 Fall
+520,Student 0520,Female,Information Technology,2025 Fall
+521,Student 0521,Female,Business,2025 Fall
+522,Student 0522,Female,Business,2025 Fall
+523,Student 0523,Female,Applied Sciences,2025 Fall
+524,Student 0524,Female,Engineering,2025 Fall
+525,Student 0525,Male,Business,2025 Fall
+526,Student 0526,Female,Applied Sciences,2025 Fall
+527,Student 0527,Male,Information Technology,2025 Fall
+528,Student 0528,Female,Engineering,2025 Fall
+529,Student 0529,Female,Business,2025 Fall
+530,Student 0530,Female,Business,2025 Fall
+531,Student 0531,Male,Engineering,2025 Fall
+532,Student 0532,Male,Engineering,2025 Fall
+533,Student 0533,Female,Engineering,2025 Fall
+534,Student 0534,Female,Design,2025 Fall
+535,Student 0535,Male,Engineering,2025 Fall
+536,Student 0536,Male,Business,2025 Fall
+537,Student 0537,Male,Applied Sciences,2025 Fall
+538,Student 0538,Male,Engineering,2025 Fall
+539,Student 0539,Male,Design,2025 Fall
+540,Student 0540,Female,Design,2025 Fall
+541,Student 0541,Female,Engineering,2025 Fall
+542,Student 0542,Male,Design,2025 Fall
+543,Student 0543,Female,Applied Sciences,2025 Fall
+544,Student 0544,Female,Business,2025 Fall
+545,Student 0545,Female,Information Technology,2025 Fall
+546,Student 0546,Male,Engineering,2025 Fall
+547,Student 0547,Male,Business,2025 Fall
+548,Student 0548,Male,Engineering,2025 Fall
+549,Student 0549,Male,Information Technology,2025 Fall
+550,Student 0550,Female,Engineering,2025 Fall
+551,Student 0551,Female,Applied Sciences,2025 Fall
+552,Student 0552,Male,Information Technology,2025 Fall
+553,Student 0553,Female,Applied Sciences,2025 Fall
+554,Student 0554,Male,Applied Sciences,2025 Fall
+555,Student 0555,Female,Applied Sciences,2025 Fall
+556,Student 0556,Female,Engineering,2025 Fall
+557,Student 0557,Male,Information Technology,2025 Fall
+558,Student 0558,Male,Engineering,2025 Fall
+559,Student 0559,Female,Applied Sciences,2025 Fall
+560,Student 0560,Male,Engineering,2025 Fall
+561,Student 0561,Female,Engineering,2025 Fall
+562,Student 0562,Female,Engineering,2025 Fall
+563,Student 0563,Male,Design,2025 Fall
+564,Student 0564,Male,Business,2025 Fall
+565,Student 0565,Male,Engineering,2025 Fall
+566,Student 0566,Female,Engineering,2025 Fall
+567,Student 0567,Male,Engineering,2025 Fall
+568,Student 0568,Male,Applied Sciences,2025 Fall
+569,Student 0569,Female,Information Technology,2025 Fall
+570,Student 0570,Male,Information Technology,2025 Fall
+571,Student 0571,Male,Engineering,2025 Fall
+572,Student 0572,Male,Information Technology,2025 Fall
+573,Student 0573,Female,Business,2025 Fall
+574,Student 0574,Male,Business,2025 Fall
+575,Student 0575,Female,Applied Sciences,2025 Fall
+576,Student 0576,Male,Business,2025 Fall
+577,Student 0577,Female,Information Technology,2025 Fall
+578,Student 0578,Male,Applied Sciences,2025 Fall
+579,Student 0579,Female,Design,2025 Fall
+580,Student 0580,Male,Applied Sciences,2025 Fall
+581,Student 0581,Female,Information Technology,2025 Fall
+582,Student 0582,Male,Information Technology,2025 Fall
+583,Student 0583,Male,Design,2025 Fall
+584,Student 0584,Female,Engineering,2025 Fall
+585,Student 0585,Male,Design,2025 Fall
+586,Student 0586,Male,Engineering,2025 Fall
+587,Student 0587,Female,Engineering,2025 Fall
+588,Student 0588,Female,Engineering,2025 Fall
+589,Student 0589,Male,Business,2025 Fall
+590,Student 0590,Male,Design,2025 Fall
+591,Student 0591,Female,Design,2025 Fall
+592,Student 0592,Male,Applied Sciences,2025 Fall
+593,Student 0593,Male,Applied Sciences,2025 Fall
+594,Student 0594,Male,Design,2025 Fall
+595,Student 0595,Female,Engineering,2025 Fall
+596,Student 0596,Female,Engineering,2025 Fall
+597,Student 0597,Female,Engineering,2025 Fall
+598,Student 0598,Female,Design,2025 Fall
+599,Student 0599,Male,Information Technology,2025 Fall
+600,Student 0600,Female,Engineering,2025 Fall
+601,Student 0601,Female,Design,2025 Fall
+602,Student 0602,Male,Information Technology,2025 Fall
+603,Student 0603,Female,Information Technology,2025 Fall
+604,Student 0604,Male,Applied Sciences,2025 Fall
+605,Student 0605,Female,Information Technology,2025 Fall
+606,Student 0606,Female,Information Technology,2025 Fall
+607,Student 0607,Male,Applied Sciences,2025 Fall
+608,Student 0608,Male,Information Technology,2025 Fall
+609,Student 0609,Male,Business,2025 Fall
+610,Student 0610,Male,Information Technology,2025 Fall
+611,Student 0611,Female,Business,2025 Fall
+612,Student 0612,Female,Business,2025 Fall
+613,Student 0613,Female,Design,2025 Fall
+614,Student 0614,Female,Engineering,2025 Fall
+615,Student 0615,Male,Engineering,2025 Fall
+616,Student 0616,Male,Engineering,2025 Fall
+617,Student 0617,Male,Business,2025 Fall
+618,Student 0618,Female,Engineering,2025 Fall
+619,Student 0619,Female,Business,2025 Fall
+620,Student 0620,Male,Design,2025 Fall
+621,Student 0621,Female,Applied Sciences,2025 Fall
+622,Student 0622,Female,Engineering,2025 Fall
+623,Student 0623,Female,Business,2025 Fall
+624,Student 0624,Male,Information Technology,2025 Fall
+625,Student 0625,Female,Engineering,2025 Fall
+626,Student 0626,Male,Applied Sciences,2025 Fall
+627,Student 0627,Female,Information Technology,2025 Fall
+628,Student 0628,Female,Engineering,2025 Fall
+629,Student 0629,Male,Design,2025 Fall
+630,Student 0630,Female,Information Technology,2025 Fall
+631,Student 0631,Male,Information Technology,2025 Fall
+632,Student 0632,Male,Information Technology,2025 Fall
+633,Student 0633,Male,Engineering,2025 Fall
+634,Student 0634,Male,Engineering,2025 Fall
+635,Student 0635,Female,Design,2025 Fall
+636,Student 0636,Female,Business,2025 Fall
+637,Student 0637,Female,Engineering,2025 Fall
+638,Student 0638,Female,Applied Sciences,2025 Fall
+639,Student 0639,Male,Information Technology,2025 Fall
+640,Student 0640,Female,Engineering,2025 Fall
+641,Student 0641,Male,Business,2025 Fall
+642,Student 0642,Female,Applied Sciences,2025 Fall
+643,Student 0643,Female,Applied Sciences,2025 Fall
+644,Student 0644,Female,Engineering,2025 Fall
+645,Student 0645,Male,Engineering,2025 Fall
+646,Student 0646,Male,Information Technology,2025 Fall
+647,Student 0647,Female,Engineering,2025 Fall
+648,Student 0648,Female,Applied Sciences,2025 Fall
+649,Student 0649,Female,Design,2025 Fall
+650,Student 0650,Female,Information Technology,2025 Fall
+651,Student 0651,Female,Engineering,2025 Fall
+652,Student 0652,Female,Design,2025 Fall
+653,Student 0653,Female,Applied Sciences,2025 Fall
+654,Student 0654,Male,Business,2025 Fall
+655,Student 0655,Male,Applied Sciences,2025 Fall
+656,Student 0656,Female,Engineering,2025 Fall
+657,Student 0657,Male,Business,2025 Fall
+658,Student 0658,Male,Business,2025 Fall
+659,Student 0659,Female,Information Technology,2025 Fall
+660,Student 0660,Male,Applied Sciences,2025 Fall
+661,Student 0661,Male,Information Technology,2025 Fall
+662,Student 0662,Male,Engineering,2025 Fall
+663,Student 0663,Male,Design,2025 Fall
+664,Student 0664,Male,Information Technology,2025 Fall
+665,Student 0665,Female,Engineering,2025 Fall
+666,Student 0666,Male,Engineering,2025 Fall
+667,Student 0667,Male,Information Technology,2025 Fall
+668,Student 0668,Male,Business,2025 Fall
+669,Student 0669,Male,Engineering,2025 Fall
+670,Student 0670,Male,Business,2025 Fall
+671,Student 0671,Female,Engineering,2026 Fall
+672,Student 0672,Male,Engineering,2026 Fall
+673,Student 0673,Female,Business,2026 Fall
+674,Student 0674,Male,Business,2026 Fall
+675,Student 0675,Female,Design,2026 Fall
+676,Student 0676,Male,Applied Sciences,2026 Fall
+677,Student 0677,Male,Business,2026 Fall
+678,Student 0678,Male,Business,2026 Fall
+679,Student 0679,Male,Engineering,2026 Fall
+680,Student 0680,Male,Engineering,2026 Fall
+681,Student 0681,Male,Design,2026 Fall
+682,Student 0682,Male,Applied Sciences,2026 Fall
+683,Student 0683,Male,Information Technology,2026 Fall
+684,Student 0684,Female,Design,2026 Fall
+685,Student 0685,Male,Engineering,2026 Fall
+686,Student 0686,Male,Applied Sciences,2026 Fall
+687,Student 0687,Female,Applied Sciences,2026 Fall
+688,Student 0688,Female,Engineering,2026 Fall
+689,Student 0689,Male,Engineering,2026 Fall
+690,Student 0690,Male,Design,2026 Fall
+691,Student 0691,Male,Design,2026 Fall
+692,Student 0692,Male,Business,2026 Fall
+693,Student 0693,Male,Business,2026 Fall
+694,Student 0694,Female,Applied Sciences,2026 Fall
+695,Student 0695,Female,Business,2026 Fall
+696,Student 0696,Male,Applied Sciences,2026 Fall
+697,Student 0697,Male,Information Technology,2026 Fall
+698,Student 0698,Male,Engineering,2026 Fall
+699,Student 0699,Male,Information Technology,2026 Fall
+700,Student 0700,Male,Engineering,2026 Fall
+701,Student 0701,Female,Applied Sciences,2026 Fall
+702,Student 0702,Male,Information Technology,2026 Fall
+703,Student 0703,Male,Business,2026 Fall
+704,Student 0704,Male,Business,2026 Fall
+705,Student 0705,Male,Engineering,2026 Fall
+706,Student 0706,Female,Design,2026 Fall
+707,Student 0707,Female,Design,2026 Fall
+708,Student 0708,Female,Business,2026 Fall
+709,Student 0709,Female,Business,2026 Fall
+710,Student 0710,Female,Engineering,2026 Fall
+711,Student 0711,Male,Design,2026 Fall
+712,Student 0712,Male,Applied Sciences,2026 Fall
+713,Student 0713,Female,Business,2026 Fall
+714,Student 0714,Male,Applied Sciences,2026 Fall
+715,Student 0715,Female,Design,2026 Fall
+716,Student 0716,Male,Information Technology,2026 Fall
+717,Student 0717,Male,Engineering,2026 Fall
+718,Student 0718,Male,Engineering,2026 Fall
+719,Student 0719,Male,Business,2026 Fall
+720,Student 0720,Male,Business,2026 Fall
+721,Student 0721,Female,Applied Sciences,2026 Fall
+722,Student 0722,Male,Business,2026 Fall
+723,Student 0723,Male,Business,2026 Fall
+724,Student 0724,Male,Information Technology,2026 Fall
+725,Student 0725,Male,Engineering,2026 Fall
+726,Student 0726,Female,Information Technology,2026 Fall
+727,Student 0727,Male,Engineering,2026 Fall
+728,Student 0728,Female,Engineering,2026 Fall
+729,Student 0729,Male,Engineering,2026 Fall
+730,Student 0730,Female,Information Technology,2026 Fall
+731,Student 0731,Male,Information Technology,2026 Fall
+732,Student 0732,Female,Applied Sciences,2026 Fall
+733,Student 0733,Male,Engineering,2026 Fall
+734,Student 0734,Male,Applied Sciences,2026 Fall
+735,Student 0735,Female,Information Technology,2026 Fall
+736,Student 0736,Male,Engineering,2026 Fall
+737,Student 0737,Female,Business,2026 Fall
+738,Student 0738,Male,Design,2026 Fall
+739,Student 0739,Male,Applied Sciences,2026 Fall
+740,Student 0740,Male,Engineering,2026 Fall
+741,Student 0741,Male,Business,2026 Fall
+742,Student 0742,Female,Business,2026 Fall
+743,Student 0743,Female,Design,2026 Fall
+744,Student 0744,Male,Information Technology,2026 Fall
+745,Student 0745,Female,Design,2026 Fall
+746,Student 0746,Male,Information Technology,2026 Fall
+747,Student 0747,Female,Design,2026 Fall
+748,Student 0748,Male,Information Technology,2026 Fall
+749,Student 0749,Female,Engineering,2026 Fall
+750,Student 0750,Male,Information Technology,2026 Fall
+751,Student 0751,Female,Engineering,2026 Fall
+752,Student 0752,Female,Business,2026 Fall
+753,Student 0753,Male,Engineering,2026 Fall
+754,Student 0754,Female,Engineering,2026 Fall
+755,Student 0755,Female,Design,2026 Fall
+756,Student 0756,Female,Information Technology,2026 Fall
+757,Student 0757,Male,Engineering,2026 Fall
+758,Student 0758,Female,Engineering,2026 Fall
+759,Student 0759,Female,Applied Sciences,2026 Fall
+760,Student 0760,Male,Applied Sciences,2026 Fall
+761,Student 0761,Female,Engineering,2026 Fall
+762,Student 0762,Male,Engineering,2026 Fall
+763,Student 0763,Female,Business,2026 Fall
+764,Student 0764,Female,Design,2026 Fall
+765,Student 0765,Male,Engineering,2026 Fall
+766,Student 0766,Female,Engineering,2026 Fall
+767,Student 0767,Female,Engineering,2026 Fall
+768,Student 0768,Female,Engineering,2026 Fall
+769,Student 0769,Male,Information Technology,2026 Fall
+770,Student 0770,Female,Information Technology,2026 Fall
+771,Student 0771,Male,Design,2026 Fall
+772,Student 0772,Female,Applied Sciences,2026 Fall
+773,Student 0773,Male,Engineering,2026 Fall
+774,Student 0774,Male,Business,2026 Fall
+775,Student 0775,Male,Engineering,2026 Fall
+776,Student 0776,Female,Engineering,2026 Fall
+777,Student 0777,Male,Engineering,2026 Fall
+778,Student 0778,Male,Business,2026 Fall
+779,Student 0779,Male,Engineering,2026 Fall
+780,Student 0780,Male,Engineering,2026 Fall
+781,Student 0781,Female,Information Technology,2026 Fall
+782,Student 0782,Male,Applied Sciences,2026 Fall
+783,Student 0783,Male,Business,2026 Fall
+784,Student 0784,Male,Applied Sciences,2026 Fall
+785,Student 0785,Female,Applied Sciences,2026 Fall
+786,Student 0786,Male,Information Technology,2026 Fall
+787,Student 0787,Female,Applied Sciences,2026 Fall
+788,Student 0788,Male,Applied Sciences,2026 Fall
+789,Student 0789,Male,Design,2026 Fall
+790,Student 0790,Male,Engineering,2026 Fall
+791,Student 0791,Female,Information Technology,2026 Fall
+792,Student 0792,Female,Engineering,2026 Fall
+793,Student 0793,Male,Business,2026 Fall
+794,Student 0794,Male,Business,2026 Fall
+795,Student 0795,Male,Business,2026 Fall
+796,Student 0796,Female,Business,2026 Fall
+797,Student 0797,Female,Business,2026 Fall
+798,Student 0798,Male,Business,2026 Fall
+799,Student 0799,Female,Engineering,2026 Fall
+800,Student 0800,Male,Business,2026 Fall
+801,Student 0801,Male,Information Technology,2026 Fall
+802,Student 0802,Female,Information Technology,2026 Fall
+803,Student 0803,Female,Business,2026 Fall
+804,Student 0804,Male,Business,2026 Fall
+805,Student 0805,Female,Engineering,2026 Fall
+806,Student 0806,Male,Engineering,2026 Fall
+807,Student 0807,Male,Business,2026 Fall
+808,Student 0808,Female,Information Technology,2026 Fall
+809,Student 0809,Female,Engineering,2026 Fall
+810,Student 0810,Female,Business,2026 Fall
+811,Student 0811,Female,Engineering,2026 Fall
+812,Student 0812,Female,Engineering,2026 Fall
+813,Student 0813,Male,Engineering,2026 Fall
+814,Student 0814,Female,Engineering,2026 Fall
+815,Student 0815,Male,Design,2026 Fall
+816,Student 0816,Female,Business,2026 Fall
+817,Student 0817,Male,Business,2026 Fall
+818,Student 0818,Female,Information Technology,2026 Fall
+819,Student 0819,Female,Business,2026 Fall
+820,Student 0820,Female,Business,2026 Fall
+821,Student 0821,Male,Applied Sciences,2026 Fall
+822,Student 0822,Female,Applied Sciences,2026 Fall
+823,Student 0823,Female,Engineering,2026 Fall
+824,Student 0824,Male,Business,2026 Fall
+825,Student 0825,Male,Applied Sciences,2026 Fall
+826,Student 0826,Female,Applied Sciences,2026 Fall
+827,Student 0827,Male,Design,2026 Fall
+828,Student 0828,Female,Business,2026 Fall
+829,Student 0829,Female,Business,2026 Fall
+830,Student 0830,Female,Business,2026 Fall
+831,Student 0831,Male,Information Technology,2026 Fall
+832,Student 0832,Male,Business,2026 Fall
+833,Student 0833,Male,Engineering,2026 Fall
+834,Student 0834,Male,Information Technology,2026 Fall
+835,Student 0835,Male,Applied Sciences,2026 Fall
+836,Student 0836,Female,Information Technology,2026 Fall
+837,Student 0837,Female,Business,2026 Fall
+838,Student 0838,Female,Engineering,2026 Fall
+839,Student 0839,Male,Engineering,2026 Fall
+840,Student 0840,Female,Engineering,2026 Fall
+841,Student 0841,Male,Business,2026 Fall
+842,Student 0842,Male,Engineering,2026 Fall
+843,Student 0843,Male,Engineering,2026 Fall
+844,Student 0844,Male,Applied Sciences,2026 Fall
+845,Student 0845,Female,Design,2026 Fall
+846,Student 0846,Male,Design,2026 Fall
+847,Student 0847,Female,Design,2026 Fall
+848,Student 0848,Female,Business,2026 Fall
+849,Student 0849,Male,Business,2026 Fall
+850,Student 0850,Male,Information Technology,2026 Fall

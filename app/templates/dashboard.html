@@ -4,7 +4,7 @@
 
 {% block content %}
 {% if not stats %}
-  <div class="alert alert-warning mt-3">No student data found. Run <code>python app/data/prepare_real_data.py</code>.</div>
+  <div class="alert alert-warning mt-3">No data found. Run <code>python app/data/generate_students.py</code> or add the CSV files described in the README.</div>
 {% else %}
 {% macro kpi(icon, color, value, label) %}
 <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card h-100"><div class="card-body">
@@ -12,43 +12,39 @@
   <div class="stat-value">{{ value }}</div><div class="stat-label">{{ label }}</div></div></div></div>
 {% endmacro %}
 <div class="row g-4 mt-1">
-  <div class="col-12"><div class="alert alert-secondary mb-0 small">
-    <i class="fa-solid fa-database me-1"></i>
-    Real data: <strong>{{ stats.total_students }} course records</strong> of {{ stats.distinct_students }} students from the UCI
-    <em>Student Performance</em> dataset (Cortez &amp; Silva, 2008). Only what drives results is used: <strong>term marks, absences and the final mark</strong>.
-    Marks are shown as percentages and converted to letters and a 4.0 GPA with the UTAS-style scale below.
+  <div class="col-12"><div class="alert alert-warning mb-0 small">
+    <i class="fa-solid fa-flask me-1"></i>
+    <strong>Simulated data.</strong> {{ stats.students }} synthetic students in {{ stats.majors }} majors, {{ stats.attempts }} graded course attempts,
+    laid out like a UTAS transcript (semester, course, credit hours, mark, attendance %, W withdrawals, repeats, SGPA / CGPA).
+    No real student is in it. Replace the CSV files with anonymised real transcripts of the same shape to get real results.
   </div></div>
 
-  {{ kpi('fa-users', 'primary', stats.total_students, 'Course records') }}
-  {{ kpi('fa-circle-check', 'success', stats.passed, 'Passed the course') }}
-  {{ kpi('fa-circle-xmark', 'danger', stats.failed, 'Failed (' ~ stats.fail_rate ~ '%)') }}
-  {{ kpi('fa-star', 'warning', stats.avg_gpa ~ ' / 4', 'Average GPA') }}
-  {{ kpi('fa-person-walking', 'info', stats.avg_absences, 'Average absences') }}
-  {{ kpi('fa-triangle-exclamation', 'secondary', stats.at_risk_count, 'GPA below 1.0 (at risk)') }}
+  {{ kpi('fa-users', 'primary', stats.students, 'Students') }}
+  {{ kpi('fa-star', 'warning', stats.avg_cgpa ~ ' / 4', 'Average CGPA') }}
+  {{ kpi('fa-circle-check', 'success', stats.good_standing, 'Good standing') }}
+  {{ kpi('fa-triangle-exclamation', 'warning', stats.warning, 'Academic warning') }}
+  {{ kpi('fa-ban', 'danger', stats.probation, 'Probation') }}
+  {{ kpi('fa-circle-xmark', 'secondary', stats.fail_rate ~ '%', 'Attempts failed') }}
 
-  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Result of the course</div><div class="card-body">
-    <div class="chart-box"><canvas data-chart="doughnut" data-labels='{{ stats.result_counts.keys()|list|tojson }}' data-values='{{ stats.result_counts.values()|list|tojson }}'></canvas></div></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Result of course attempts</div><div class="card-body">
+    <div class="chart-box"><canvas data-chart="doughnut" data-labels='{{ stats.result_counts.keys()|list|tojson }}' data-values='{{ stats.result_counts.values()|list|tojson }}'></canvas></div>
+    <p class="small text-muted mt-2 mb-0">{{ stats.in_progress }} courses are still in progress ({{ stats.current_semester }}).</p></div></div></div>
 
-  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Letter grades (average of term 1 and 2)</div><div class="card-body">
-    <div class="chart-box"><canvas data-chart="bar" data-labels='{{ stats.letter_distribution.keys()|list|tojson }}' data-values='{{ stats.letter_distribution.values()|list|tojson }}' data-label="Students" data-unit="Students"></canvas></div></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Letter grades</div><div class="card-body">
+    <div class="chart-box"><canvas data-chart="bar" data-labels='{{ stats.grade_distribution.keys()|list|tojson }}' data-values='{{ stats.grade_distribution.values()|list|tojson }}' data-label="Attempts" data-unit="Attempts"></canvas></div></div></div></div>
 
-  {% set ds = [] %}
-  {% for o, c in [('Pass', '#20c997'), ('Fail', '#dc3545')] %}
-    {% set _ = ds.append({'label': o, 'data': stats.term_means[o], 'color': c}) %}
-  {% endfor %}
-  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Average mark by final result</div><div class="card-body">
-    <div class="chart-box"><canvas data-chart="bar" data-labels='["Term 1", "Term 2", "Final"]' data-datasets='{{ ds|tojson }}' data-unit="Mark (%)" data-max="100"></canvas></div>
-    <p class="small text-muted mt-2 mb-0">Students who fail are already behind in term 1 and fall further back: marks are the clearest early signal.</p></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Average CGPA by major</div><div class="card-body">
+    <div class="chart-box"><canvas data-chart="bar" data-labels='{{ stats.cgpa_by_major.labels|tojson }}' data-values='{{ stats.cgpa_by_major['values']|tojson }}' data-label="CGPA" data-unit="CGPA" data-max="4"></canvas></div></div></div></div>
 
-  <div class="col-lg-7"><div class="card h-100"><div class="card-header">Chance of failing the course by GPA</div><div class="card-body">
-    <div class="chart-box"><canvas data-chart="bar" data-labels='{{ stats.gpa_band.labels|tojson }}' data-values='{{ stats.gpa_band.fail_rate|tojson }}' data-label="Failed (%)" data-unit="%" data-color="#dc3545"></canvas></div>
-    <p class="small text-muted mt-2 mb-0">GPA bands: {% for l, n in stats.gpa_band.labels|zip(stats.gpa_band.size) %}{{ l }}: {{ n }} records{{ ' · ' if not loop.last }}{% endfor %}.</p></div></div></div>
+  <div class="col-lg-7"><div class="card h-100"><div class="card-header">Hardest courses (difficulty index)</div><div class="card-body">
+    <div class="chart-box"><canvas data-chart="bar" data-horizontal="1" data-labels='{{ stats.hardest.labels|tojson }}' data-values='{{ stats.hardest['values']|tojson }}' data-label="Marks lost" data-unit="Marks below the same students' other courses" data-color="#dc3545"></canvas></div>
+    <p class="small text-muted mt-2 mb-0">Difficulty = how many marks lower students score here than in their other courses. It is measured from the records, not assumed.</p></div></div></div>
 
-  <div class="col-lg-5"><div class="card h-100"><div class="card-header">Grading scale used</div><div class="card-body p-0">
-    <table class="table table-sm mb-0"><thead><tr><th>Mark</th><th>Letter</th><th>Points</th><th>Meaning</th></tr></thead><tbody>
-    {% for r in stats.scale %}<tr><td>{{ r.range }}</td><td><strong>{{ r.letter }}</strong></td><td>{{ '%.1f'|format(r.points) }}</td><td>{{ r.description }}</td></tr>{% endfor %}
+  <div class="col-lg-5"><div class="card h-100"><div class="card-header">Grade points (from the UTAS transcript)</div><div class="card-body p-0">
+    <table class="table table-sm mb-0"><thead><tr><th>Mark (assumed)</th><th>Letter</th><th>Points</th><th>Result</th></tr></thead><tbody>
+    {% for r in stats.scale %}<tr><td>{{ r.range }}</td><td><strong>{{ r.letter }}</strong></td><td>{{ '%.1f'|format(r.points) }}</td><td>{{ 'Pass' if r.points >= 2.0 else 'Fail' }}</td></tr>{% endfor %}
     </tbody></table>
-    <p class="small text-muted p-3 mb-0">Pass mark 50. The scale is defined in <code>app/grading.py</code>; edit it to match your handbook.</p></div></div></div>
+    <p class="small text-muted p-3 mb-0">Letter-to-points and "C or better passes" follow the transcript. The mark ranges are an assumption; edit <code>app/grading.py</code> to match your handbook.</p></div></div></div>
 </div>
 {% endif %}
 {% endblock %}

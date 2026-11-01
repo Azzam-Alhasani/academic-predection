@@ -1,77 +1,79 @@
 # Academic Performance Monitoring & Prediction System
 
-A web application that tracks student results on a **UTAS-style grading scale** (letter grades, GPA, academic standing), estimates the chance that a student **fails a course**, and gives each student explainable calculations and suggestions. Built with Flask, Pandas and Scikit-learn.
+A web application built around a **UTAS-style transcript**: semesters, courses, credit hours, marks, attendance %, W withdrawals, repeats, SGPA / CGPA / LCGPA and academic standing. For the courses a student is taking now it estimates the mark and the chance of failing each one, shows **which course is hardest compared with the others**, and answers two what-ifs: *"Would withdrawing one course (say Calculus II or Physics II) raise my GPA?"* and *"What if I attended more?"*. Built with Flask, Pandas and Scikit-learn.
 
-It looks at only what drives results: **term marks, absences and the final mark**. No age, gender, family, scholarship or fee data is used.
+Only marks and attendance drive the predictions. Gender is stored for reporting and is **not** a model input. There is no age, scholarship or fee data.
 
 > **Please read: what is real and what is assumed**
-> - **Data.** Real records from the UCI *Student Performance* dataset (two Portuguese secondary-school courses, Mathematics and Portuguese, 1,044 course records of 662 students, CC BY 4.0). It is **not UTAS data**. Marks (0-20) were converted to a 0-100 scale, so results show how the system behaves, not how UTAS students perform.
-> - **Grading scale.** The letter bands, grade points and standing thresholds in `app/grading.py` are **assumptions** based on a typical Omani 100-mark scale. No official UTAS table was available. Check them against the UTAS handbook and edit that one file; everything else follows.
-> - **Absences** are a count of classes missed, as recorded in the dataset. There is no total number of classes, so no attendance percentage is shown.
+> - **The data is simulated.** No public dataset has this transcript structure, and real transcripts cannot be published. `app/data/generate_students.py` creates 850 synthetic students in 5 majors (Engineering, Business, Information Technology, Applied Sciences, Design), 117 courses and about 17,000 course records. It is **modelled on the layout** of a UTAS transcript and contains no real student's data. The attendance effect, course difficulty and noise come from my assumptions, so accuracy figures show that the pipeline works, **not** how accurate it would be on real UTAS students.
+> - **From the transcript:** the letter-to-grade-point table (A 4.0 ... F 0.0), W courses not counted, and a pass needing C or better (C- and D are fails).
+> - **Assumed (edit `app/grading.py`):** the mark ranges for each letter (A from 90, A- 85, B+ 80 ... C 60 ... F below 45), the pass mark of 60, standing (Good from CGPA 2.0, Warning from 1.5, otherwise Probation) and credit-load limits (light under 12, normal 12-18, overload above 18). LCGPA is implemented as "CGPA counting only the latest attempt of a repeated course", which is my reading of the transcript.
+> - **Advice is statistical.** A recommendation to withdraw or attend more is an estimate from the model, not a promise. Always check withdrawal deadlines with your advisor.
 
 ---
 
 ## Features
 
-- **Dashboard and analytics**: pass/fail, letter grades, chance of failing by term 1 mark, GPA, change between terms, absences and course (aggregates only).
-- **Student report** (staff, or the student for their own record): term results, GPA, average, trend, safety margin above the pass mark, peer percentile, absences, a **goal planner** (the final mark needed for a target average) and a printable report. Every figure shows its formula and working.
-- **Suggestions** ranked by priority, each with the reason and the calculation behind it.
-- **Risk calculator** (public, stores nothing): enter term 1 (and optionally term 2) and absences; get the estimated risk of failing, the factors raising and lowering it, a projected final mark, and the report.
-- **Model-selection analysis**: how the model was chosen and how accurate it is (below).
-- **Bayesian analysis**: P(Fail | evidence) from the real records, with worked examples.
+- **Semester planner** (public, stores nothing): pick a major, enter your CGPA, credits so far and the courses you take with your attendance. You get the expected mark, grade and chance of failing per course, a Hard / Medium / Easy difficulty tier compared with the other courses, SGPA and CGPA forecasts, the **withdraw one course** table, the **attend more** what-if (at 90%), a target-CGPA calculator, ranked recommendations and the formulas with working.
+- **Student page** (staff, or the student for their own record): the transcript laid out like the UTAS one (per-semester SGPA, LCGPA, CGPA, credit load), the plan for the current semester, a goal planner, a printable report, and for staff add / edit / delete of students and course records.
+- **Dashboard and analytics** (aggregates only): grade distribution, CGPA by major, failure rate by attendance band, major, credit load, year, gender and course difficulty tier; the hardest and easiest courses.
+- **Course difficulty** is measured from the records: how many marks lower students score in a course than in their other courses (average over attempts), split into terciles.
+- **Model-selection analysis** and **Bayesian analysis** (P(Fail | evidence) from the records).
 - **Roles**: admin, teacher, student. **Audit log** of logins and data changes.
+
+### How the withdraw and attendance advice works
+1. For each course the models give the expected mark and the chance of an F.
+2. Withdrawing a course removes its credits from the semester; SGPA and CGPA are recomputed without it. A course is suggested only if its chance of failing is at least 30% and CGPA rises by at least 0.03.
+3. If attendance is below 85% and the chance of failing at 90% attendance would fall under 25%, the advice is **"fix attendance first"**; withdrawal is the fallback.
+4. Attending more is never predicted to lower a mark. Dropping below 12 credits triggers a warning.
 
 ---
 
-## UTAS-style grading (`app/grading.py`)
+## Transcript rules (`app/grading.py`)
 
-| Mark | Grade | Points | | Mark | Grade | Points |
-|---|---|---|---|---|---|---|
-| 90-100 | A+ | 4.0 | | 65-69 | C | 2.0 |
-| 85-89 | A | 4.0 | | 60-64 | D+ | 1.5 |
-| 80-84 | B+ | 3.5 | | 50-59 | D | 1.0 |
-| 75-79 | B | 3.0 | | 0-49 | F | 0.0 |
-| 70-74 | C+ | 2.5 | | | | |
+| Grade | Points | | Grade | Points | | Grade | Points |
+|---|---|---|---|---|---|---|---|
+| A | 4.0 | | B | 3.0 | | C- | 1.7 (fail) |
+| A- | 3.7 | | B- | 2.7 | | D+ | 1.3 (fail) |
+| B+ | 3.3 | | C+ | 2.3 | | D | 1.0 (fail) |
+| | | | C | 2.0 (pass) | | F | 0.0 (fail) |
 
-Pass mark 50. **Term GPA** = grade points of the term mark. **GPA** = average of the term GPAs. Standing (assumed, scaled to the data): Good standing from 1.0, Academic warning from 0.5, otherwise Academic probation. In the data, GPA 1.0 or more almost never fails (about 1%); 0.5-1.0 fails about 3 in 10; under 0.5 about 8 in 10. With real UTAS marks use the handbook thresholds.
+Quality points = credits x grade points. **SGPA** = quality points / attempted credits that semester. **CGPA** = the same over all attempts. **LCGPA** counts only the latest attempt of each course. A **W** course is not attempted and has no points. Needed SGPA for a target = (target x (A + n) - CGPA x A) / n, with A credits so far and n credits this semester.
 
 ---
 
 ## The data
 
-| | |
+| File (`app/data/sample/`) | Columns |
 |---|---|
-| Source | P. Cortez and A. Silva, *Using Data Mining to Predict Secondary School Student Performance*, FUBUTEC 2008. [UCI #320](https://archive.ics.uci.edu/dataset/320/student+performance), CC BY 4.0 |
-| Records | 395 Mathematics + 649 Portuguese = 1,044 course records; 382 students appear in both |
-| Kept | course, term 1 mark (`G1`), term 2 mark (`G2`), absences, final mark (`G3`) |
-| Dropped | everything else in the original files (age, sex, family, free time, alcohol ...) |
-| Conversion | mark out of 20 x 5 = mark out of 100. **Fail = final mark below 50** (22% of records) |
+| `students.csv` | `student_id, name, gender, major, entry_semester` |
+| `courses.csv` | `course_code, course_name, major, credit_hours, level` |
+| `enrollments.csv` | `enrollment_id, student_id, semester, course_code, mark, attendance, status` (status: Completed, Withdrawn or In progress; mark empty unless Completed) |
 
-`python app/data/prepare_real_data.py` builds `app/data/sample_students.csv`. A hidden `person_id` links one student's two courses so both always stay on the same side of every train/test split (no leakage). Names are generated ("Student 0001").
+Regenerate with `python app/data/generate_students.py`. **To use real data**, replace these three files with anonymised transcripts in the same format (no real names or student numbers), then run `python -m app.ml.model_selection` to redo the model study. The app copies the tables to `app/data/live/` on first start; edits made on the website are saved there.
 
 ---
 
 ## How the ML model was chosen
 
-The choice is a documented experiment (`python -m app.ml.model_selection`, about 2 minutes; results in `app/ml/model_selection.json`, `docs/09_model_selection.md` and the **Model selection** page).
+The choice is a documented experiment (`python -m app.ml.model_selection`, about 10 minutes; results in `app/ml/model_selection.json`, `docs/09_model_selection.md` and the **Model selection** page). The unit is one course attempt; all of a student's rows stay on the same side of every split (no leakage).
 
-1. **10 classifiers** (baseline, logistic, decision tree, k-NN, naive Bayes, SVM, random forest, extra trees, gradient boosting, neural network) scored with the same 5-fold cross-validation repeated 3 times, grouped by student.
+1. **10 classifiers** scored with the same 5-fold cross-validation repeated 3 times, grouped by student.
 2. **Nested cross-validation** to tune the best ones, so tuning cannot inflate the score.
-3. **Corrected resampled t-tests** (Nadeau and Bengio) to see whether differences are real, then a **parsimony rule** (simplest model within one standard error of the best).
-4. For the chosen model: threshold analysis, calibration, permutation importance and a learning curve.
+3. **Corrected resampled t-tests** (Nadeau and Bengio), then a **parsimony rule** (simplest model within one standard error of the best).
+4. Inputs: prior CGPA and credits, credit hours, load that semester, level, repeat attempt, course and major, plus attendance in the "during the semester" scenario.
 
-| Question | Selected model | Accuracy | ROC-AUC | Failing students caught | "Always say passes" |
+| Question | Selected model | Accuracy | ROC-AUC | Failures caught | "Always say passes" |
 |---|---|---|---|---|---|
-| Will the student fail? After term 1 | Gradient boosting | **89.2%** | 0.945 | 73% | 78.0% |
-| After term 2 | Logistic regression | **92.3%** | 0.974 | 79% | 78.0% |
-| Final mark (regression) | Random forest | within 5 marks: 52% / 75%; within 10: 79% / 93% (after term 1 / 2) | | | |
+| Fail the course? At registration | Logistic regression | **89.8%** | 0.886 | 40% | 86.2% |
+| During the semester (with attendance) | Logistic regression | **90.0%** | 0.909 | 43% | 86.2% |
+| Mark (regression) | Ridge regression | typical error 7.6 / 7.2 marks; within 10 marks for 83% / 85% | | | |
 
 **Honest reading.**
-- Accuracy is above the 85% target at both moments, and clearly above the 78% you get by always guessing "passes".
-- **The term marks do almost all the work.** Absences and course add very little once the marks are known (see the importance chart). Absences matter mainly at the extreme: 36% of records with 11+ absences failed, against 17-23% for the others.
-- After term 2, logistic regression, gradient boosting and random forest are statistically tied, so the simplest, explainable one is used.
-- About 27% of students who later fail are still missed after term 1 at the default 50% alert level; lowering it to 40% catches about 80% with similar accuracy.
-- The numbers are for this Portuguese data; retrain on UTAS records before relying on them.
+- The 85% accuracy target is met on this data, but guessing "passes" for everyone already scores 86%, because only 14% of attempts fail. Accuracy flatters the model; ROC-AUC (0.89-0.91) is the fairer measure.
+- Only about 40% of failures are flagged at the default 50% alert level. Lowering it to 30% catches roughly 56-64% with more false alarms (threshold table on the study page).
+- Prior CGPA is the strongest input; attendance is next once the semester has started.
+- All of this describes the **simulator**. Retrain on real anonymised transcripts before relying on any number.
 
 ---
 
@@ -82,7 +84,7 @@ python -m venv venv
 source venv/bin/activate        # Windows: .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python run.py                   # first start creates a local login:  admin / admin123
-python -m pytest tests          # optional: 21 tests
+python -m pytest tests          # optional: 30 tests
 ```
 
 Open **http://127.0.0.1:5000** and log in with `admin` / `admin123` (created only on your own computer, never on a public server). Change it on the *Password* page. Or use `run.bat` (Windows) / `bash run.sh`.
@@ -106,7 +108,7 @@ Log in at `/auth/login` with username `admin` and the password you chose.
 **Things to know about the free tier** (check Render's current limits):
 - The site sleeps after a period without visitors; the first visit afterwards takes about a minute.
 - The disk is temporary. Students added or edited through the website are lost when the service restarts or redeploys, and the data returns to the original dataset. For permanent edits, move storage to a database.
-- Anyone on the internet can see the dashboard, analytics, risk calculator and model-selection pages (aggregates only, no names). Student lists, reports, recommendations and admin pages need a login. Before loading **real UTAS records**, keep the site private (login on every page) and use a database.
+- Anyone on the internet can see the dashboard, analytics, semester planner and model-selection pages (aggregates only, no names). Student lists, reports, recommendations and admin pages need a login. Before loading **real UTAS records**, keep the site private (login on every page) and use a database.
 
 Other hosts (Railway, Fly.io, a VPS) work too: set `FLASK_ENV=production`, `SECRET_KEY` and `ADMIN_PASSWORD`, and start with
 `gunicorn run:app --workers 1 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT`.
@@ -117,13 +119,13 @@ Other hosts (Railway, Fly.io, a VPS) work too: set `FLASK_ENV=production`, `SECR
 
 ```
 ├── run.py, run.sh, run.bat, config.py, render.yaml, requirements.txt
-├── tests/test_app.py             21 automated tests
+├── tests/test_app.py             30 automated tests
 ├── app/
-│   ├── grading.py                UTAS-style scale, GPA, planner formulas (edit here)
+│   ├── grading.py                grade points, mark bands, standing, load limits (edit here)
 │   ├── auth.py, security.py, audit.py   roles, login, CSRF, audit log
 │   ├── routes/                   dashboard, students, analytics, predictions, recommendations, admin
 │   ├── ml/                       preprocessing, registry (models), model_selection (study), predictor, bayes
-│   ├── data/                     raw data, prepare_real_data.py, data_loader.py, analytics_calc.py
+│   ├── data/                     sample/ CSVs, generate_students.py, data_loader.py, stats.py, analytics_calc.py (semester planner)
 │   ├── templates/, static/
 └── docs/                         documentation (08 security, 09 model selection)
 ```
@@ -173,4 +175,4 @@ Python 3.10+, Flask, Pandas, NumPy, Scikit-learn, gunicorn, Bootstrap 5 and Char
 
 ## Licence
 
-MIT. The dataset is (c) its authors, used under CC BY 4.0.
+MIT. The included data is simulated.

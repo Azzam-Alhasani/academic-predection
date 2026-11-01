@@ -12,21 +12,22 @@
 <div class="row g-4 mt-1">
   <div class="col-12"><div class="card"><div class="card-body">
     <h5>How the model was chosen</h5>
-    <p class="mb-2">Instead of picking a model by habit, <strong>{{ study.classification.after_term1.candidates|length }} candidate models</strong> were compared on
-      {{ study.meta.n_students }} real course records of {{ study.meta.n_people }} students (failure rate {{ '%.1f'|format(study.meta.fail_rate * 100) }}%; a student's courses are always kept on the same side of every test split) with the same evaluation rules.</p>
+    <p class="mb-2">Instead of picking a model by habit, <strong>{{ study.classification.planning.candidates|length }} candidate models</strong> were compared on
+      {{ study.meta.n_students }} <strong>simulated</strong> course attempts of {{ study.meta.n_people }} students (a random sample of {{ study.meta.population_rows }} graded attempts) (failure rate {{ '%.1f'|format(study.meta.fail_rate * 100) }}%; a student's courses are always kept on the same side of every test split) with the same evaluation rules.</p>
     <ol class="mb-2 small">
       <li><strong>Fair scoring.</strong> {{ study.meta.cv.splits }}-fold cross-validation repeated {{ study.meta.cv.repeats_stage_a }} times: every student is scored by a model that never saw them, and every model sees identical splits.</li>
       <li><strong>Honest tuning.</strong> The strongest models were tuned with <em>nested</em> cross-validation: settings are chosen on training data only and scored on students the tuning never saw, so tuning cannot inflate the result.</li>
       <li><strong>Is the difference real?</strong> Corrected paired t-tests (Nadeau &amp; Bengio) compare each model with the best; p &lt; 0.05 means "really worse", otherwise "tied".</li>
       <li><strong>Decision rule.</strong> Highest mean ROC-AUC; if models are within one standard error, the simpler one wins.</li>
     </ol>
+    <div class="alert alert-warning small">The records are simulated. Accuracy here shows the pipeline works on data shaped like a transcript; it is <strong>not</strong> evidence of accuracy on real UTAS students. The simulator's attendance and course-difficulty effects are my assumptions, so a model that finds them has learned the simulator.</div>
     <div class="small text-muted">Run on {{ study.meta.generated }} · scikit-learn {{ study.meta.scikit_learn }} · seed {{ study.meta.seed }} · {{ study.meta.minutes }} minutes. Reproduce with <code>python -m app.ml.model_selection</code>.</div>
   </div></div></div>
 
   {% for scen, spec in scenarios.items() %}{% set b = study.classification[scen] %}{% set e = b.examination %}
-  <div class="col-12"><h4 class="mt-2">Will the student fail the course? - {{ spec.label|lower }}</h4>
+  <div class="col-12"><h4 class="mt-2">Will the student fail the course (grade F)? - {{ spec.label|lower }}</h4>
     <p class="text-muted small mb-0">{{ b.n }} students · {{ '%.1f'|format(b.positive_rate * 100) }}% failed the course.
-      {% if scen == 'after_term2' %}The term-2 warning is more accurate but arrives later; the term-1 warning leaves more time to act.{% endif %}</p></div>
+      {% if scen == 'during' %}Adding the attendance % sharpens the warning once the semester has started.{% endif %}</p></div>
 
   <div class="col-lg-6"><div class="card h-100"><div class="card-header">Stage A - default settings ({{ study.meta.cv.splits * study.meta.cv.repeats_stage_a }} scores each)</div>
     <div class="table-responsive"><table class="table table-sm mb-0">
@@ -76,20 +77,18 @@
 
   <div class="col-12"><div class="card"><div class="card-body">
     <h5>Conclusions and limits</h5>
-    {% set c1 = (study.classification.after_term1.tuned|selectattr('key', 'equalto', study.classification.after_term1.selected)|list)[0] %}
-    {% set c2 = (study.classification.after_term2.tuned|selectattr('key', 'equalto', study.classification.after_term2.selected)|list)[0] %}
-    {% set base = (study.classification.after_term1.candidates|selectattr('key', 'equalto', 'majority')|list)[0] %}
+    {% set c1 = (study.classification.planning.tuned|selectattr('key', 'equalto', study.classification.planning.selected)|list)[0] %}
+    {% set c2 = (study.classification.during.tuned|selectattr('key', 'equalto', study.classification.during.selected)|list)[0] %}
+    {% set base = (study.classification.planning.candidates|selectattr('key', 'equalto', 'majority')|list)[0] %}
     <ul class="small mb-0">
-      <li><strong>Target accuracy.</strong> The selected models reach about <strong>{{ '%.0f'|format(c1.metrics.accuracy.mean * 100) }}%</strong> after term 1 and
-        <strong>{{ '%.0f'|format(c2.metrics.accuracy.mean * 100) }}%</strong> after term 2, against {{ '%.0f'|format(base.metrics.accuracy.mean * 100) }}% for a model that always says "passes".
-        ROC-AUC is {{ pm(c1.metrics.roc_auc) }} and {{ pm(c2.metrics.roc_auc) }}.</li>
-      <li><strong>Marks do the work.</strong> The permutation-importance charts show that the term marks carry almost all the signal. Absences and course add very little once the marks are known.
-        Absences matter mostly at the extreme (11 or more) - see Analytics.</li>
-      <li><strong>Several models are statistically tied.</strong> After term 2, logistic regression, gradient boosting and random forest are within noise of each other (p &gt; 0.05), so the simplest (logistic regression, which can also explain a result) is chosen.</li>
-      <li><strong>The limit is the data, not the algorithm.</strong> Different model families agree and the learning curve flattens. Higher accuracy would need new information (assessment scores, participation), not a fancier model.</li>
-      <li><strong>Missed students.</strong> At the default 50% alert level about {{ '%.0f'|format((1 - c1.metrics.recall.mean) * 100) }}% of students who later fail are not flagged after term 1.
-        Lowering the alert level to 40% flags more of them; the threshold table shows the trade-off.</li>
-      <li><strong>Transfer.</strong> The data is from two Portuguese secondary-school courses, not UTAS. Retrain on UTAS records with the same script (<code>python -m app.ml.model_selection</code>) before relying on the numbers.</li>
+      <li><strong>Target accuracy (85% or more).</strong> Met on this data: about <strong>{{ '%.0f'|format(c1.metrics.accuracy.mean * 100) }}%</strong> at registration and
+        <strong>{{ '%.0f'|format(c2.metrics.accuracy.mean * 100) }}%</strong> during the semester. But always predicting "passes" already scores {{ '%.0f'|format(base.metrics.accuracy.mean * 100) }}%,
+        because only {{ '%.0f'|format(study.meta.fail_rate * 100) }}% of attempts fail. Accuracy alone flatters the model, so look at ROC-AUC ({{ pm(c1.metrics.roc_auc) }} and {{ pm(c2.metrics.roc_auc) }}).</li>
+      <li><strong>Many failures are missed.</strong> At the default 50% alert level only about {{ '%.0f'|format(c2.metrics.recall.mean * 100) }}% of attempts that end in F are flagged even with attendance known
+        ({{ '%.0f'|format(c1.metrics.recall.mean * 100) }}% at registration). Lowering the alert level to 30% catches more (see the threshold table) at the price of more false alarms.</li>
+      <li><strong>What matters.</strong> Prior CGPA is the strongest input; attendance comes next once the semester has started; the course itself adds a little. Gender is not a model input.</li>
+      <li><strong>Several models are statistically tied</strong> (p &gt; 0.05), so the simplest, logistic regression (which can also be explained), is chosen for the fail chance; ridge regression is chosen for the mark.</li>
+      <li><strong>Simulated data.</strong> The attendance effect, course difficulty and noise are set by the simulator (<code>app/data/generate_students.py</code>), so these figures describe the simulator. Retrain on anonymised real transcripts in the same CSV format with <code>python -m app.ml.model_selection</code> before relying on any number.</li>
     </ul></div></div></div>
 </div>
 {% endif %}

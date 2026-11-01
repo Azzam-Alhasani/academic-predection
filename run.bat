@@ -41,12 +41,7 @@ if %ERRORLEVEL% neq 0 (
 )
 echo [OK] Dependencies ready.
 
-REM Build the real-student dataset if missing (from app\data\raw\*.csv)
-if not exist "app\data\sample_students.csv" (
-    echo [INFO] Preparing the student dataset...
-    python app\data\prepare_real_data.py
-    echo [OK] Dataset ready.
-)
+REM The simulated transcript tables ship in app\data\sample\; regenerate with: python app\data\generate_students.py
 
 REM First start creates a local login (admin / admin123) and prints it; change it in the app.
 

@@ -6,12 +6,12 @@
 <div class="card mt-3"><div class="card-body">
   <form method="GET" class="row g-2 align-items-end">
     <div class="col-md-3"><label class="form-label small">Search name / ID</label><input name="q" value="{{ q }}" class="form-control form-control-sm" maxlength="60" /></div>
-    <div class="col-md-3"><label class="form-label small">Course</label>
-      <select name="course" class="form-select form-select-sm"><option value="">All courses</option>
-      {% for p in courses %}<option {{ 'selected' if p == course }}>{{ p }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label small">Major</label>
+      <select name="major" class="form-select form-select-sm"><option value="">All majors</option>
+      {% for m in majors %}<option {{ 'selected' if m == major }}>{{ m }}</option>{% endfor %}</select></div>
     <div class="col-md-4"><label class="form-label small">Show</label>
       <select name="status" class="form-select form-select-sm">
-        {% for v, t in [('', 'All students'), ('at_risk', 'At risk (GPA below 1.0)'), ('Pass', 'Passed'), ('Fail', 'Failed'), ('In progress', 'In progress')] %}
+        {% for v, t in [('', 'All students'), ('at_risk', 'At risk (CGPA below 2.0)'), ('Good standing', 'Good standing'), ('Academic warning', 'Academic warning'), ('Academic probation', 'Academic probation')] %}
         <option value="{{ v }}" {{ 'selected' if v == status }}>{{ t }}</option>{% endfor %}</select></div>
     <div class="col-md-2 d-flex gap-2"><button class="btn btn-sm btn-primary flex-grow-1">Filter</button>
       <a href="{{ url_for('students.student_list') }}" class="btn btn-sm btn-outline-secondary">Reset</a></div>
@@ -24,26 +24,24 @@
   <div class="collapse" id="addForm"><div class="card-body border-bottom">
     <form method="POST" action="{{ url_for('students.student_add') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      {% set f = {'course': 'Mathematics', 'absences': 0} %}
-      {% set with_name = true %}{% set with_final = true %}
+      {% set f = {} %}
       {% include "_student_fields.html" %}
       <button class="btn btn-success mt-3">Save student</button>
     </form></div></div>
   <div class="table-responsive"><table class="table table-hover table-sm align-middle mb-0">
-    <thead><tr><th>ID</th><th>Name</th><th>Course</th><th>Term 1</th><th>Term 2</th><th>Absences</th><th>GPA</th><th>Standing</th><th>Result</th><th></th></tr></thead><tbody>
+    <thead><tr><th>ID</th><th>Name</th><th>Major</th><th>Gender</th><th>Credits</th><th>CGPA</th><th>This semester</th><th>Standing</th><th></th></tr></thead><tbody>
     {% for s in students %}<tr>
-      <td>{{ s.student_id }}</td><td>{{ s.name }}</td><td class="small">{{ s.course }}</td>
-      <td>{{ s.t1_mark }}%</td><td>{{ (s.t2_mark ~ '%') if s.t2_mark == s.t2_mark else '-' }}</td><td>{{ s.absences }}</td>
-      <td>{{ '%.2f'|format(s.gpa) }}</td>
+      <td>{{ s.student_id }}</td><td>{{ s.name }}</td><td class="small">{{ s.major }}</td><td>{{ s.gender }}</td><td>{{ s.attempted|int }}</td>
+      <td>{{ ('%.2f'|format(s.cgpa)) if s.cgpa == s.cgpa else '-' }}</td>
+      <td class="small">{{ s.current_courses|int }} courses · {{ s.current_credits|int }} cr</td>
       <td><span class="badge {{ 'bg-success' if s.standing == 'Good standing' else 'bg-warning text-dark' if s.standing == 'Academic warning' else 'bg-danger' if s.standing == 'Academic probation' else 'bg-secondary' }}">{{ s.standing }}</span></td>
-      <td>{{ s.result }}{% if s.final_mark == s.final_mark %} ({{ s.final_mark }}%){% endif %}</td>
       <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('students.student_detail', student_id=s.student_id) }}">Open</a></td>
-    </tr>{% else %}<tr><td colspan="10" class="text-center text-muted py-4">No students match.</td></tr>{% endfor %}
+    </tr>{% else %}<tr><td colspan="9" class="text-center text-muted py-4">No students match.</td></tr>{% endfor %}
     </tbody></table></div>
   {% if pages > 1 %}<div class="card-footer d-flex justify-content-between align-items-center">
     <span class="small text-muted">Page {{ page }} of {{ pages }}</span>
     <div class="btn-group btn-group-sm">
-      {% set args = {'q': q, 'course': course, 'status': status} %}
+      {% set args = {'q': q, 'major': major, 'status': status} %}
       {% if page > 1 %}<a class="btn btn-outline-secondary" href="{{ url_for('students.student_list', page=page-1, **args) }}">Previous</a>{% endif %}
       {% if page < pages %}<a class="btn btn-outline-secondary" href="{{ url_for('students.student_list', page=page+1, **args) }}">Next</a>{% endif %}
     </div></div>{% endif %}
