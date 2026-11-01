@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Analytics{% endblock %}
-{% block page_title %}Performance Analytics{% endblock %}
+{% block page_title %}Performance analytics{% endblock %}
 
 {% block content %}
 {% if not data %}<div class="alert alert-warning mt-3">No data available.</div>{% else %}
 {% macro rate_chart(title, g, note='', col='col-md-6 col-xl-4') %}
 <div class="{{ col }}"><div class="card h-100"><div class="card-header">{{ title }}</div><div class="card-body">
-  <div class="chart-box"><canvas data-chart="bar" data-labels='{{ g.labels|tojson }}' data-values='{{ g.fail_rate|tojson }}' data-label="Failed (%)" data-unit="%" data-color="#dc3545"></canvas></div>
+  <div class="chart-box"><canvas data-chart="bar" data-labels='{{ g.labels|tojson }}' data-values='{{ g.fail_rate|tojson }}' data-label="Failed (%)" data-unit="%" data-color="#b02a20"></canvas></div>
   <p class="small text-muted mt-2 mb-0">{% for l, n in g.labels|zip(g.size) %}{{ l }}: {{ n }}{{ ' · ' if not loop.last }}{% endfor %} attempts. Average mark: {% for l, m in g.labels|zip(g.mean_mark) %}{{ m }}{{ ' · ' if not loop.last }}{% endfor %}. {{ note }}</p></div></div></div>
 {% endmacro %}
 <div class="row g-4 mt-1">
@@ -21,14 +21,14 @@
   {{ rate_chart('By gender', data.gender, 'Shown for reporting only; gender is not used by any prediction.') }}
 
   <div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-header">Failure rate by course difficulty tier</div><div class="card-body">
-    <div class="chart-box"><canvas data-chart="bar" data-labels='{{ data.tier_fail.keys()|list|tojson }}' data-values='{{ data.tier_fail.values()|list|tojson }}' data-label="Failed (%)" data-unit="%" data-color="#dc3545"></canvas></div>
+    <div class="chart-box"><canvas data-chart="bar" data-labels='{{ data.tier_fail.keys()|list|tojson }}' data-values='{{ data.tier_fail.values()|list|tojson }}' data-label="Failed (%)" data-unit="%" data-color="#b02a20"></canvas></div>
     <p class="small text-muted mt-2 mb-0">Withdrawal rate: {% for k, v in data.tier_withdraw.items() %}{{ k }} {{ v }}%{{ ' · ' if not loop.last }}{% endfor %}.</p></div></div></div>
 
   <div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-header">CGPA distribution</div><div class="card-body">
     <div class="chart-box"><canvas data-chart="bar" data-labels='{{ data.cgpa_hist.labels|tojson }}' data-values='{{ data.cgpa_hist['values']|tojson }}' data-label="Students" data-unit="Students"></canvas></div>
     <p class="small text-muted mt-2 mb-0">Average CGPA by gender: {% for l, v in data.cgpa_gender.labels|zip(data.cgpa_gender['values']) %}{{ l }} {{ v }}{{ ' · ' if not loop.last }}{% endfor %}.</p></div></div></div>
 
-  {% set pts = [{'label': 'Passed', 'data': [], 'color': '#20c997'}, {'label': 'Failed', 'data': [], 'color': '#dc3545'}] %}
+  {% set pts = [{'label': 'Passed', 'data': [], 'color': '#1d7a52'}, {'label': 'Failed', 'data': [], 'color': '#b02a20'}] %}
   {% for x, y, d in data.scatter.x|zip(data.scatter.y, data.scatter.fail) %}{% set _ = pts[d].data.append({'x': x, 'y': y}) %}{% endfor %}
   <div class="col-lg-7"><div class="card h-100"><div class="card-header">Attendance vs mark (300 attempts)</div><div class="card-body">
     <div class="chart-box tall"><canvas data-chart="scatter" data-points='{{ pts|tojson }}' data-xtitle="Attendance (%)" data-unit="Mark"></canvas></div></div></div></div>
