@@ -1,23 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Login{% endblock %}
-{% block page_title %}Login{% endblock %}
+{% block title %}Log in{% endblock %}
+{% block page_title %}Log in{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center mt-5">
   <div class="col-12 col-md-6 col-lg-4">
-    <div class="card shadow-sm">
+    <div class="card">
       <div class="card-body p-4">
         <div class="text-center mb-4">
-          <i class="fa-solid fa-graduation-cap fa-2x text-primary mb-2"></i>
-          <h4 class="fw-bold mb-1">Sign in</h4>
-          <p class="text-muted small mb-0">Academic Performance System</p>
+          <i class="fa-solid fa-building-columns fa-2x text-primary mb-2" aria-hidden="true"></i>
+          <h2 class="h4 mb-1">Log in to your account</h2>
+          <p class="text-muted small mb-0">Academic Performance Monitoring and Prediction System</p>
         </div>
 
         {% if dev_hint %}
         <div class="alert alert-info small py-2">
           <strong>Development mode.</strong> Default account:
           <code>{{ dev_hint }}</code> / <code>{{ dev_password }}</code>
-          (only exists on your own computer; it is disabled on a public server).
+          (it exists only on your own computer and is turned off on a public server).
         </div>
         {% elif no_accounts %}
         <div class="alert alert-warning small py-2">
@@ -37,12 +37,12 @@
             <input type="password" name="password" class="form-control" required />
           </div>
           <button type="submit" class="btn btn-primary w-100">
-            <i class="fa-solid fa-right-to-bracket me-2"></i>Login
+            Log in
           </button>
         </form>
 
         <p class="text-muted small text-center mt-3 mb-0">
-          Access to add / edit student records requires an account.
+          You need an account to add or edit student records.
         </p>
       </div>
     </div>

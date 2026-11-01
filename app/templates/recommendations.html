@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Recommendations{% endblock %}
-{% block page_title %}Recommendations &amp; Bayesian Analysis{% endblock %}
+{% block page_title %}Recommendations and Bayesian analysis{% endblock %}
 
 {% block content %}
 <div class="row g-4 mt-1">
-  <div class="col-12"><div class="card"><div class="card-header">Bayes' Theorem on the real records (chance of failing a course attempt, simulated records)</div><div class="card-body">
+  <div class="col-12"><div class="card"><div class="card-header">Bayes' theorem: chance of failing a course attempt (simulated records)</div><div class="card-body">
     {% if bayes.prior is none %}<p class="text-muted">No data.</p>{% else %}
     <p class="mb-2"><code>P(Fail | Evidence) = P(Evidence | Fail) × P(Fail) / P(Evidence)</code> &nbsp;·&nbsp; prior <strong>P(Fail) = {{ bayes.prior }}</strong></p>
     <div class="table-responsive"><table class="table table-sm">

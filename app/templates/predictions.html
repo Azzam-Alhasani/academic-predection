@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Semester Planner{% endblock %}
-{% block page_title %}Semester Planner{% endblock %}
+{% block title %}Semester planner{% endblock %}
+{% block page_title %}Semester planner{% endblock %}
 
 {% block content %}
 <div class="row g-4 mt-1">
   <div class="col-12"><div class="alert alert-secondary small mb-0">
     <i class="fa-solid fa-circle-info me-1"></i>
-    Enter the courses you are taking this semester and your attendance in each. You get an expected mark and chance of failing per course, which course is hardest compared with your others,
+    Enter the courses you are taking this semester and your attendance in each. For each course you get an expected mark and a chance of failing. You also see which course is hardest compared with your others,
     whether <strong>withdrawing</strong> one would raise your GPA, and what <strong>attending more</strong> would change. Nothing you type is stored.
     The models are trained on <strong>simulated</strong> transcripts ({{ training_size }} course attempts); see the <a href="{{ url_for('predictions.model_selection') }}">model-selection study</a>.
   </div></div>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Model Selection{% endblock %}
-{% block page_title %}Model Selection Analysis{% endblock %}
+{% block title %}Model selection{% endblock %}
+{% block page_title %}Model selection study{% endblock %}
 
 {% block content %}
 {% macro pm(m, pct=false) %}{% if m.mean is none %}n/a{% elif pct %}{{ '%.1f'|format(m.mean * 100) }}% ± {{ '%.1f'|format(m.sd * 100) }}{% else %}{{ '%.3f'|format(m.mean) }} ± {{ '%.3f'|format(m.sd) }}{% endif %}{% endmacro %}
@@ -12,31 +12,31 @@
 <div class="row g-4 mt-1">
   <div class="col-12"><div class="card"><div class="card-body">
     <h5>How the model was chosen</h5>
-    <p class="mb-2">Instead of picking a model by habit, <strong>{{ study.classification.planning.candidates|length }} candidate models</strong> were compared on
+    <p class="mb-2"><strong>{{ study.classification.planning.candidates|length }} candidate models</strong> were compared on
       {{ study.meta.n_students }} <strong>simulated</strong> course attempts of {{ study.meta.n_people }} students (a random sample of {{ study.meta.population_rows }} graded attempts) (failure rate {{ '%.1f'|format(study.meta.fail_rate * 100) }}%; a student's courses are always kept on the same side of every test split) with the same evaluation rules.</p>
     <ol class="mb-2 small">
       <li><strong>Fair scoring.</strong> {{ study.meta.cv.splits }}-fold cross-validation repeated {{ study.meta.cv.repeats_stage_a }} times: every student is scored by a model that never saw them, and every model sees identical splits.</li>
-      <li><strong>Honest tuning.</strong> The strongest models were tuned with <em>nested</em> cross-validation: settings are chosen on training data only and scored on students the tuning never saw, so tuning cannot inflate the result.</li>
-      <li><strong>Is the difference real?</strong> Corrected paired t-tests (Nadeau &amp; Bengio) compare each model with the best; p &lt; 0.05 means "really worse", otherwise "tied".</li>
+      <li><strong>Tuning without leakage.</strong> The strongest models were tuned with <em>nested</em> cross-validation: settings are chosen on training data only and scored on students the tuning never saw, so tuning cannot inflate the result.</li>
+      <li><strong>Testing the differences.</strong> Corrected paired t-tests (Nadeau &amp; Bengio) compare each model with the best; p &lt; 0.05 means "really worse", otherwise "tied".</li>
       <li><strong>Decision rule.</strong> Highest mean ROC-AUC; if models are within one standard error, the simpler one wins.</li>
     </ol>
-    <div class="alert alert-warning small">The records are simulated. Accuracy here shows the pipeline works on data shaped like a transcript; it is <strong>not</strong> evidence of accuracy on real UTAS students. The simulator's attendance and course-difficulty effects are my assumptions, so a model that finds them has learned the simulator.</div>
+    <div class="alert alert-warning small">The records are simulated. Accuracy here shows the pipeline works on data shaped like a transcript; it is <strong>not</strong> evidence of accuracy on real UTAS students. The attendance and course-difficulty effects are assumptions built into the simulator, so a model that finds them has learned the simulator.</div>
     <div class="small text-muted">Run on {{ study.meta.generated }} · scikit-learn {{ study.meta.scikit_learn }} · seed {{ study.meta.seed }} · {{ study.meta.minutes }} minutes. Reproduce with <code>python -m app.ml.model_selection</code>.</div>
   </div></div></div>
 
   {% for scen, spec in scenarios.items() %}{% set b = study.classification[scen] %}{% set e = b.examination %}
-  <div class="col-12"><h4 class="mt-2">Will the student fail the course (grade F)? - {{ spec.label|lower }}</h4>
+  <div class="col-12"><h4 class="mt-2">Will the student fail the course (grade F)? ({{ spec.label|lower }})</h4>
     <p class="text-muted small mb-0">{{ b.n }} students · {{ '%.1f'|format(b.positive_rate * 100) }}% failed the course.
       {% if scen == 'during' %}Adding the attendance % sharpens the warning once the semester has started.{% endif %}</p></div>
 
-  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Stage A - default settings ({{ study.meta.cv.splits * study.meta.cv.repeats_stage_a }} scores each)</div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Stage A: default settings ({{ study.meta.cv.splits * study.meta.cv.repeats_stage_a }} scores each)</div>
     <div class="table-responsive"><table class="table table-sm mb-0">
       <thead><tr><th>Model</th><th>Accuracy</th><th>Recall</th><th>ROC-AUC</th><th>vs best</th></tr></thead><tbody>
       {% for c in b.candidates|sort(attribute='metrics.roc_auc.mean', reverse=true) %}
       <tr {% if c.complexity == 0 %}class="text-muted"{% endif %}><td>{{ c.label }}</td><td>{{ pm(c.metrics.accuracy, true) }}</td><td>{{ pm(c.metrics.recall, true) }}</td><td>{{ pm(c.metrics.roc_auc) }}</td><td>{% if c.complexity == 0 %}baseline{% else %}{{ pval(c) }}{% endif %}</td></tr>
       {% endfor %}</tbody></table></div></div></div>
 
-  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Stage B - tuned, nested cross-validation ({{ study.meta.cv.splits * study.meta.cv.repeats_stage_b }} scores each)</div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Stage B: tuned with nested cross-validation ({{ study.meta.cv.splits * study.meta.cv.repeats_stage_b }} scores each)</div>
     <div class="table-responsive"><table class="table table-sm mb-0">
       <thead><tr><th>Model</th><th>Accuracy</th><th>Recall</th><th>ROC-AUC</th><th>vs best</th><th>Within 1 SE</th></tr></thead><tbody>
       {% for c in b.tuned %}<tr {% if c.key == b.selected %}class="table-active fw-semibold"{% endif %}>
@@ -46,13 +46,13 @@
     <div class="card-body small">Selected: <strong>{{ b.selected_label }}</strong>{% if b.selected_params %} with {% for k, v in b.selected_params.items() %}<code>{{ k }}={{ v }}</code> {% endfor %}{% endif %}.
       Rule: {{ b.rule }}.</div></div></div>
 
-  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Which inputs matter most (selected model)</div><div class="card-body">
-    <div class="chart-box"><canvas data-chart="bar" data-horizontal data-labels='{{ e.importance|map(attribute="feature")|list|tojson }}' data-values='{{ e.importance|map(attribute="drop_in_auc")|list|tojson }}' data-label="Drop in AUC when shuffled" data-color="#6f42c1"></canvas></div>
-    <p class="small text-muted mt-2 mb-0">Permutation importance: how much accuracy falls when one input is scrambled.</p></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Inputs that matter most (selected model)</div><div class="card-body">
+    <div class="chart-box"><canvas data-chart="bar" data-horizontal data-labels='{{ e.importance|map(attribute="feature")|list|tojson }}' data-values='{{ e.importance|map(attribute="drop_in_auc")|list|tojson }}' data-label="Drop in AUC when shuffled" data-color="#2e5e9e"></canvas></div>
+    <p class="small text-muted mt-2 mb-0">Permutation importance: how much ROC-AUC falls when one input is shuffled.</p></div></div></div>
 
-  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Does more data help? (learning curve)</div><div class="card-body">
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">Learning curve: does more data help?</div><div class="card-body">
     {% set lc = e.learning_curve %}
-    <div class="chart-box"><canvas data-chart="line" data-labels='{{ lc.sizes|tojson }}' data-datasets='{{ [{"label": "Training", "data": lc.train, "color": "#adb5bd"}, {"label": "Validation", "data": lc.validation, "color": "#20c997"}]|tojson }}' data-xtitle="Training students" data-unit="ROC-AUC"></canvas></div>
+    <div class="chart-box"><canvas data-chart="line" data-labels='{{ lc.sizes|tojson }}' data-datasets='{{ [{"label": "Training", "data": lc.train, "color": "#8a94a3"}, {"label": "Validation", "data": lc.validation, "color": "#00937c"}]|tojson }}' data-xtitle="Training students" data-unit="ROC-AUC"></canvas></div>
     <p class="small text-muted mt-2 mb-0">Validation AUC {{ lc.validation[0] }} → {{ lc.validation[-1] }}: gains are flattening, so more students would help only a little.</p></div></div></div>
 
   <div class="col-lg-4"><div class="card h-100"><div class="card-header">Choosing the alert threshold</div>
@@ -63,7 +63,7 @@
   {% endfor %}
 
   {% for scen, spec in scenarios.items() %}{% set r = study.regression[scen] %}
-  <div class="col-12"><h4 class="mt-2">Projecting the final mark - {{ spec.label|lower }}</h4></div>
+  <div class="col-12"><h4 class="mt-2">Projecting the final mark ({{ spec.label|lower }})</h4></div>
   <div class="col-lg-7"><div class="card h-100"><div class="card-header">Tuned models (lower RMSE is better; final marks vary by {{ r.target_sd }} marks)</div>
     <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Model</th><th>RMSE (marks)</th><th>MAE (marks)</th><th>R²</th><th>vs best</th></tr></thead><tbody>
       {% for c in r.tuned %}<tr {% if c.key == r.selected %}class="table-active fw-semibold"{% endif %}><td>{{ c.label }}{% if c.key == r.selected %} <span class="badge bg-primary">selected</span>{% endif %}</td>
