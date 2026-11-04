@@ -19,6 +19,13 @@
           <code>{{ dev_hint }}</code> / <code>{{ dev_password }}</code>
           (it exists only on your own computer and is turned off on a public server).
         </div>
+        {% elif no_accounts and admin_password_problem %}
+        <div class="alert alert-warning small py-2">
+          <strong>No login account exists yet.</strong> The <code>ADMIN_PASSWORD</code> environment
+          variable is set, but the server refused it: {{ admin_password_problem }}
+          Choose a password of at least 10 characters with letters and numbers, not containing words like
+          "admin" or "password", then restart the service.
+        </div>
         {% elif no_accounts %}
         <div class="alert alert-warning small py-2">
           No login account has been set up on this server yet. The site owner must set the
