@@ -161,7 +161,7 @@ The system is now designed to run on a public HTTPS host (Render) instead of a l
 | Blank charts | Allow access to the Bootstrap / Chart.js CDN, or host those files locally |
 | `SECRET_KEY must be set` | Production only: set the `SECRET_KEY` environment variable |
 | Can't log in (local) | Use `admin` / `admin123`, or reset with `python app/data/create_users.py NewPassword` |
-| Can't log in (hosted) | Set `ADMIN_PASSWORD` in the host's environment settings and restart the service; username is `admin` |
+| Can't log in (hosted) | `admin123` works only locally. Set `ADMIN_PASSWORD` in the host's environment settings (10+ characters, letters and numbers, not containing "admin" or "password") and restart; username is `admin`. The login page says if the password was refused |
 | Edits disappeared on the hosted site | Free hosting has a temporary disk; see the hosting notes above |
 | Port 5000 in use | Set the `PORT` environment variable |
 

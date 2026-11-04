@@ -296,3 +296,19 @@ def test_security_headers(client):
     h = client.get("/").headers
     assert "nonce-" in h["Content-Security-Policy"] and "frame-ancestors 'none'" in h["Content-Security-Policy"]
     assert h["X-Content-Type-Options"] == "nosniff"
+
+
+def test_weak_admin_password_is_explained_on_the_login_page(tmp_path, monkeypatch):
+    from app import auth
+    monkeypatch.setattr(auth, "_users_file", lambda: str(tmp_path / "users.csv"))
+    monkeypatch.setenv("ADMIN_PASSWORD", "admin123")
+    monkeypatch.setattr("config.ProductionConfig.SECRET_KEY", "test-secret")
+    app = create_app("production")
+    assert not auth.has_accounts()
+    app.config["SESSION_COOKIE_SECURE"] = False
+    page = app.test_client().get("/auth/login").get_data(as_text=True)
+    assert "the server refused it: Use at least 10 characters." in page
+
+    monkeypatch.setenv("ADMIN_PASSWORD", "Utas2026Strong")
+    create_app("production")
+    assert auth.verify_user("admin", "Utas2026Strong")
