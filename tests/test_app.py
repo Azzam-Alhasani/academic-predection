@@ -312,3 +312,17 @@ def test_weak_admin_password_is_explained_on_the_login_page(tmp_path, monkeypatc
     monkeypatch.setenv("ADMIN_PASSWORD", "Utas2026Strong")
     create_app("production")
     assert auth.verify_user("admin", "Utas2026Strong")
+
+
+def test_admin_password_env_is_trimmed_and_resets_an_existing_admin(tmp_path, monkeypatch):
+    from app import auth
+    monkeypatch.setattr(auth, "_users_file", lambda: str(tmp_path / "users.csv"))
+    monkeypatch.setattr("config.ProductionConfig.SECRET_KEY", "test-secret")
+    monkeypatch.setenv("ADMIN_PASSWORD", "Utas2026Strong \n")
+    create_app("production")
+    assert auth.verify_user("admin", "Utas2026Strong")
+
+    monkeypatch.setenv("ADMIN_PASSWORD", "Another2026Pass")
+    create_app("production")
+    assert auth.verify_user("admin", "Another2026Pass")
+    assert not auth.verify_user("admin", "Utas2026Strong")

@@ -144,17 +144,21 @@ def ensure_dev_admin(app) -> None:
 
 def ensure_admin_from_env(app=None) -> None:
     """
-    Create the admin account from ADMIN_PASSWORD (hosts without a shell, e.g. Render) when it does
-    not exist yet. The password must satisfy the password rules; a weak one is refused.
+    Create the admin account from ADMIN_PASSWORD (hosts without a shell, e.g. Render), or reset its
+    password when ADMIN_PASSWORD has changed. The password must satisfy the password rules; a weak
+    one is refused.
     """
-    password = os.environ.get("ADMIN_PASSWORD")
+    # Strip: a value pasted into a hosting dashboard often carries a trailing space or newline,
+    # which would silently become part of the password.
+    password = (os.environ.get("ADMIN_PASSWORD") or "").strip()
     if app is not None:
         app.config["ADMIN_PASSWORD_PROBLEM"] = None
     if not password:
         return
-    username = os.environ.get("ADMIN_USERNAME", "admin")
-    df = load_users()
-    if not df.empty and (df["username"] == username).any():
+    username = (os.environ.get("ADMIN_USERNAME") or "admin").strip() or "admin"
+    existing = get_user(username)
+    if existing is not None and check_password_hash(existing["password_hash"], password):
+        print(f" * Admin login '{username}' is ready (password from ADMIN_PASSWORD).")
         return
     production = not (app.config.get("DEBUG") if app is not None else False)
     problem = validate_password(password, production=production)
@@ -164,7 +168,10 @@ def ensure_admin_from_env(app=None) -> None:
             # Shown on the login page: otherwise the owner only sees "Invalid username or password".
             app.config["ADMIN_PASSWORD_PROBLEM"] = problem
         return
+    # ADMIN_PASSWORD is the source of truth for this account: changing it in the host's settings
+    # and restarting resets the password even if the account already exists.
     add_user(username, password, role="admin")
+    print(f" * Admin login '{username}' is ready (password from ADMIN_PASSWORD).")
 
 
 # ── session helpers and decorators ───────────────────────────────────────────
