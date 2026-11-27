@@ -6,11 +6,18 @@
 <div class="row g-4 mt-1">
   <div class="col-12"><div class="card"><div class="card-header">Bayes' theorem: chance of failing a course attempt (simulated records)</div><div class="card-body">
     {% if bayes.prior is none %}<p class="text-muted">No data.</p>{% else %}
-    <p class="mb-2"><code>P(Fail | Evidence) = P(Evidence | Fail) × P(Fail) / P(Evidence)</code> &nbsp;·&nbsp; prior <strong>P(Fail) = {{ bayes.prior }}</strong></p>
+    <div class="alert alert-secondary small mb-3">
+      <strong>In plain words:</strong> overall, <strong>{{ (bayes.prior * 100)|round|int }}%</strong> of course attempts end in an F.
+      Bayes' Theorem asks how that chance <em>changes</em> once we know one fact about the student, such as low attendance.
+      It needs only counting: of the students with that fact, how many failed? Red means clearly riskier than average; green means clearly safer.
+    </div>
+    <p class="mb-2 small text-muted">Formula: <code>P(Fail | Evidence) = P(Evidence | Fail) × P(Fail) / P(Evidence)</code> &nbsp;·&nbsp; P(Fail) = {{ bayes.prior }}</p>
     <div class="table-responsive"><table class="table table-sm">
-      <thead><tr><th>Evidence type</th><th>Evidence</th><th>Students</th><th>P(E | Fail)</th><th>P(E)</th><th>P(Fail | E)</th></tr></thead><tbody>
-      {% for r in bayes.by_evidence %}<tr><td>{{ r.evidence_type }}</td><td>{{ r.evidence }}</td><td>{{ r.students }}</td><td>{{ r.p_e_given_dropout }}</td><td>{{ r.p_evidence }}</td>
-        <td class="fw-semibold {{ 'text-danger' if r.p_dropout_given_e > bayes.prior * 1.5 else 'text-success' if r.p_dropout_given_e < bayes.prior * 0.6 }}">{{ r.p_dropout_given_e }}</td></tr>{% endfor %}
+      <thead><tr><th>Evidence type</th><th>Evidence</th><th>Students</th><th>P(E | Fail)</th><th>P(E)</th><th>P(Fail | E)</th><th>In plain words</th></tr></thead><tbody>
+      {% for r in bayes.by_evidence %}{% set risky = r.p_dropout_given_e > bayes.prior * 1.5 %}{% set safe = r.p_dropout_given_e < bayes.prior * 0.6 %}
+      <tr><td>{{ r.evidence_type }}</td><td>{{ r.evidence }}</td><td>{{ r.students }}</td><td>{{ r.p_e_given_dropout }}</td><td>{{ r.p_evidence }}</td>
+        <td class="fw-semibold {{ 'text-danger' if risky else 'text-success' if safe }}">{{ r.p_dropout_given_e }}</td>
+        <td class="small">About <strong>{{ (r.p_dropout_given_e * 100)|round|int }} in 100</strong> fail{% if risky %} (riskier than average){% elif safe %} (safer than average){% endif %}</td></tr>{% endfor %}
       </tbody></table></div>
     <h6 class="mt-3">Worked examples</h6>
     <div class="row g-3">{% for w in bayes.worked_examples %}<div class="col-md-6"><div class="calc-card card"><div class="card-body small">

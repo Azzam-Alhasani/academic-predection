@@ -75,12 +75,12 @@ def _get_models():
         for scenario in SCENARIOS:
             X, y, _ = prepare_classification(frame, scenario)
             block = study.get("classification", {}).get(scenario)
-            key = block["selected"] if block else "logistic"
+            key = block["selected"] if block and block["selected"] in CLASSIFIERS else "logistic"
             models["classifier"][scenario] = {"key": key, "label": CLASSIFIERS[key][0],
                                               "pipeline": _pipeline(scenario, CLASSIFIERS, key, _params(block)).fit(X, y)}
             Xr, yr, _ = prepare_regression(frame, scenario)
             rblock = study.get("regression", {}).get(scenario)
-            rkey = rblock["selected"] if rblock else "ridge"
+            rkey = rblock["selected"] if rblock and rblock["selected"] in REGRESSORS else "linear"
             models["regressor"][scenario] = {"key": rkey, "label": REGRESSORS[rkey][0],
                                              "pipeline": _pipeline(scenario, REGRESSORS, rkey, _params(rblock)).fit(Xr, yr)}
         _cache.update(tables=tables, models=models, frame=frame)

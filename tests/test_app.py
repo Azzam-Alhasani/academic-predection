@@ -162,12 +162,23 @@ def test_planner_rejects_bad_input(client):
 
 
 # ── model study ─────────────────────────────────────────
+def test_plain_language_pages_render(client):
+    _login(client, "teacher", "correct-horse2")
+    page = client.get("/predictions/selection").get_data(as_text=True)
+    assert "How the predictions work, in plain words" in page and "used by the website" in page
+    for name in ("Logistic Regression", "Decision Tree", "Random Forest", "Gradient Boosting"):
+        assert name in page
+    assert "Naive Bayes" not in page and "Neural Network" not in page
+    rec = client.get("/recommendations/").get_data(as_text=True)
+    assert "In plain words" in rec
+
+
 def test_model_study_is_present_and_honest():
     from app.ml.predictor import load_selection
     study = load_selection()
     for scen in ("planning", "during"):
         block = study["classification"][scen]
-        assert len(block["candidates"]) >= 10 and block["selected"]
+        assert len(block["candidates"]) == 5 and block["selected"]            # 4 models + the baseline
         base = next(c for c in block["candidates"] if c["key"] == "majority")
         best = next(c for c in block["tuned"] if c["key"] == block["selected"])
         assert best["metrics"]["accuracy"]["mean"] >= 0.85                       # the target accuracy (on simulated data)

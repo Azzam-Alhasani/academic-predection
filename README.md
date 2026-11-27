@@ -56,9 +56,20 @@ Regenerate with `python app/data/generate_students.py`. **To use real data**, re
 
 ## How the ML model was chosen
 
-The choice is a documented experiment (`python -m app.ml.model_selection`, about 10 minutes; results in `app/ml/model_selection.json`, `docs/09_model_selection.md` and the **Model selection** page). The unit is one course attempt; all of a student's rows stay on the same side of every split (no leakage).
+The choice is a documented experiment (`python -m app.ml.model_selection`, about 10 minutes; results in `app/ml/model_selection.json`, `docs/09_model_selection.md` and the **How Predictions Work** page). The unit is one course attempt; all of a student's rows stay on the same side of every split (no leakage).
 
-1. **10 classifiers** scored with the same 5-fold cross-validation repeated 3 times, grouped by student.
+We deliberately compare only **four** model families, the same four for both tasks, from simplest to most powerful:
+
+| # | Model | In plain words |
+|---|---|---|
+| 1 | Logistic Regression (fail?) / Linear Regression (mark) | Gives each input a weight and adds them up |
+| 2 | Decision Tree | A short list of yes/no questions |
+| 3 | Random Forest | 200 different trees that vote |
+| 4 | Gradient Boosting | Trees built one after another, each fixing the last one's mistakes |
+
+A baseline ("always guess pass" / "always guess the average") is included only as the bar every model must beat.
+
+1. **The 4 models** scored with the same 5-fold cross-validation repeated 3 times, grouped by student.
 2. **Nested cross-validation** to tune the best ones, so tuning cannot inflate the score.
 3. **Corrected resampled t-tests** (Nadeau and Bengio), then a **parsimony rule** (simplest model within one standard error of the best).
 4. Inputs: prior CGPA and credits, credit hours, load that semester, level, repeat attempt, course and major, plus attendance in the "during the semester" scenario.
@@ -67,7 +78,7 @@ The choice is a documented experiment (`python -m app.ml.model_selection`, about
 |---|---|---|---|---|---|
 | Fail the course? At registration | Logistic regression | **89.8%** | 0.886 | 40% | 86.2% |
 | During the semester (with attendance) | Logistic regression | **90.0%** | 0.909 | 43% | 86.2% |
-| Mark (regression) | Ridge regression | typical error 7.6 / 7.2 marks; within 10 marks for 83% / 85% | | | |
+| Mark (regression) | Linear regression | typical error 7.7 / 7.2 marks; within 10 marks for 82% / 85% | | | |
 
 **Honest reading.**
 - The 85% accuracy target is met on this data, but guessing "passes" for everyone already scores 86%, because only 14% of attempts fail. Accuracy flatters the model; ROC-AUC (0.89-0.91) is the fairer measure.

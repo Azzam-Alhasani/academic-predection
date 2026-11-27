@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Model selection{% endblock %}
-{% block page_title %}Model selection study{% endblock %}
+{% block title %}How predictions work{% endblock %}
+{% block page_title %}How predictions work{% endblock %}
 
 {% block content %}
 {% macro pm(m, pct=false) %}{% if m.mean is none %}n/a{% elif pct %}{{ '%.1f'|format(m.mean * 100) }}% ± {{ '%.1f'|format(m.sd * 100) }}{% else %}{{ '%.3f'|format(m.mean) }} ± {{ '%.3f'|format(m.sd) }}{% endif %}{% endmacro %}
@@ -9,6 +9,69 @@
 {% if not study %}
 <div class="alert alert-warning mt-3">The study has not been run yet. Run <code>python -m app.ml.model_selection</code>.</div>
 {% else %}
+{% set dur = study.classification.during %}
+{% set models4 = dur.candidates|selectattr('complexity', 'gt', 0)|sort(attribute='complexity')|list %}
+{% set base_c = (dur.candidates|selectattr('complexity', 'equalto', 0)|list)[0] %}
+<div class="row g-4 mt-1">
+  <div class="col-12"><div class="card"><div class="card-body">
+    <h5 class="mb-1">How the predictions work, in plain words</h5>
+    <p class="text-muted mb-0">The website predicts two things for every course: <strong>the chance of failing</strong> and <strong>the expected final mark</strong>.
+      To decide <em>how</em> to predict them, we tested {{ models4|length }} kinds of model, from the simplest to the most powerful, on the same student records and kept the one that worked best.</p>
+  </div></div></div>
+
+  {% for c in models4 %}
+  <div class="col-md-6 col-xl-3"><div class="card h-100 {{ 'border-primary' if c.key == dur.selected }}"><div class="card-body">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+      <span class="badge text-bg-secondary">{{ loop.index }}</span>
+      {% if c.key == dur.selected %}<span class="badge bg-primary">used by the website</span>{% endif %}
+    </div>
+    <h6>{{ c.label }}</h6>
+    <p class="small mb-3">{{ c.description }}</p>
+    {% set score = (c.metrics.roc_auc.mean * 100)|round|int %}
+    <div class="small text-muted mb-1">Score: <strong class="text-body">{{ score }} / 100</strong></div>
+    <div class="progress" style="height:8px" role="progressbar" aria-label="{{ c.label }} score" aria-valuenow="{{ score }}" aria-valuemin="0" aria-valuemax="100">
+      <div class="progress-bar {{ 'bg-primary' if c.key == dur.selected else 'bg-secondary' }}" style="width: {{ score }}%"></div></div>
+  </div></div></div>
+  {% endfor %}
+
+  <div class="col-12"><div class="small text-muted">
+    <strong>What the score means:</strong> take one student who failed and one who passed. The score is how many times out of 100 the model gives the higher risk to the student who really failed.
+    50 is a coin flip; 100 is perfect. Scores are for the "during the semester" prediction (attendance known).
+  </div></div>
+
+  {% set chosen = (dur.tuned|selectattr('key', 'equalto', dur.selected)|list)[0] %}
+  {% set reg = study.regression.during %}
+  {% set reg_chosen = (reg.tuned|selectattr('key', 'equalto', reg.selected)|list)[0] %}
+  <div class="col-lg-6"><div class="card h-100"><div class="card-body">
+    <h6><i class="fa-solid fa-triangle-exclamation me-1 text-warning"></i>Chance of failing: {{ dur.selected_label }}</h6>
+    <p class="small mb-2">{% if dur.selected == dur.best_tuned %}It had the best score of the four and is also the simplest to explain, so the choice was easy.
+      {% else %}{{ (dur.tuned|selectattr('key', 'equalto', dur.best_tuned)|list)[0].label }} scored a little higher, but the difference is too small to be real, so we chose the simpler model, which is also easier to explain.{% endif %}</p>
+    <ul class="small mb-0">
+      <li>Right about pass or fail for <strong>{{ (chosen.metrics.accuracy.mean * 100)|round|int }} out of 100</strong> course attempts.</li>
+      <li>Of every 10 students who end up failing, it warns about <strong>{{ (chosen.metrics.recall.mean * 10)|round|int }}</strong> of them in advance.</li>
+    </ul>
+  </div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-body">
+    <h6><i class="fa-solid fa-bullseye me-1 text-info"></i>Expected final mark: {{ reg.selected_label }}</h6>
+    <p class="small mb-2">{% if reg.selected == reg.best_tuned %}It was the most accurate of the four and the simplest.
+      {% else %}{{ (reg.tuned|selectattr('key', 'equalto', reg.best_tuned)|list)[0].label }} was very slightly more accurate, but the difference is too small to be real, so we chose the simpler model.{% endif %}</p>
+    <ul class="small mb-0">
+      <li>Usually within about <strong>±{{ reg_chosen.metrics.rmse.mean|round|int }} marks</strong> of the real final mark.</li>
+      <li>Within 10 marks for <strong>{{ (reg.examination.within_10_marks * 100)|round|int }} out of 100</strong> course attempts.</li>
+    </ul>
+  </div></div></div>
+
+  <div class="col-12"><div class="alert alert-warning small mb-0">
+    These numbers come from <strong>simulated</strong> student records, not real UTAS students. They show the system works; they are not a promise about real results.
+  </div></div>
+
+  <div class="col-12">
+    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#techDetails" aria-expanded="false" aria-controls="techDetails">
+      <i class="fa-solid fa-flask me-1"></i>Show the full technical study (for staff and examiners)</button>
+  </div>
+</div>
+
+<div class="collapse" id="techDetails">
 <div class="row g-4 mt-1">
   <div class="col-12"><div class="card"><div class="card-body">
     <h5>How the model was chosen</h5>
@@ -87,9 +150,10 @@
       <li><strong>Many failures are missed.</strong> At the default 50% alert level only about {{ '%.0f'|format(c2.metrics.recall.mean * 100) }}% of attempts that end in F are flagged even with attendance known
         ({{ '%.0f'|format(c1.metrics.recall.mean * 100) }}% at registration). Lowering the alert level to 30% catches more (see the threshold table) at the price of more false alarms.</li>
       <li><strong>What matters.</strong> Prior CGPA is the strongest input; attendance comes next once the semester has started; the course itself adds a little. Gender is not a model input.</li>
-      <li><strong>Several models are statistically tied</strong> (p &gt; 0.05), so the simplest, logistic regression (which can also be explained), is chosen for the fail chance; ridge regression is chosen for the mark.</li>
+      <li><strong>Several models are statistically tied</strong> (p &gt; 0.05), so the simplest one within one standard error is chosen: {{ study.classification.during.selected_label }} for the fail chance and {{ study.regression.during.selected_label }} for the mark.</li>
       <li><strong>Simulated data.</strong> The attendance effect, course difficulty and noise are set by the simulator (<code>app/data/generate_students.py</code>), so these figures describe the simulator. Retrain on anonymised real transcripts in the same CSV format with <code>python -m app.ml.model_selection</code> before relying on any number.</li>
     </ul></div></div></div>
+</div>
 </div>
 {% endif %}
 {% endblock %}
