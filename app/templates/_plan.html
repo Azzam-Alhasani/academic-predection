@@ -18,7 +18,9 @@
       <td class="{{ 'text-danger fw-semibold' if c.p_fail >= 0.3 }}">{{ (c.p_fail * 100)|round|int }}%</td>
       <td class="small">{{ '%.0f'|format(c.mark_att) }}% · {{ (c.p_fail_att * 100)|round|int }}% fail</td></tr>{% endfor %}
     </tbody></table></div>
-  <div class="card-footer small text-muted">Difficulty compares each course with the marks students normally get in their other courses (Hard = the toughest third). Chance of F: {{ plan.models.classifier or 'selected model' }}; mark: {{ plan.models.regressor or 'selected model' }}; typical mark error about ±{{ '%.0f'|format(plan.sd) }} marks.</div>
+  <div class="card-footer small text-muted">Difficulty compares each course with the marks students normally get in their other courses (Hard = the toughest third).
+    Expected marks are usually within about ±{{ '%.0f'|format(plan.sd) }} marks of the real result.
+    <a href="{{ url_for('predictions.model_selection') }}">How are these predicted?</a></div>
 </div>
 
 {% if plan.withdraw %}
@@ -49,7 +51,7 @@
   {% else %}<li class="list-group-item text-muted">No concerns found for this plan.</li>{% endfor %}
 </ul><div class="card-footer small text-muted">These are statistical estimates from simulated records, not promises. Check withdrawal deadlines and rules with your advisor.</div></div>
 
-<div class="card mt-3"><div class="card-header">Calculations</div><div class="accordion accordion-flush" id="calcAcc">
+<div class="card mt-3"><div class="card-header">Show the maths <span class="small text-muted">(optional: click a line to see how it was worked out)</span></div><div class="accordion accordion-flush" id="calcAcc">
   {% for c in plan.calculations %}<div class="accordion-item"><h2 class="accordion-header">
     <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#calc{{ loop.index }}"><span class="me-2">{{ c.title }}:</span><strong>{{ c.value }}</strong></button></h2>
     <div id="calc{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#calcAcc"><div class="accordion-body small">

@@ -8,7 +8,7 @@
     <i class="fa-solid fa-circle-info me-1"></i>
     Enter the courses you are taking this semester and your attendance in each. You get an expected mark and chance of failing per course, which course is hardest compared with your others,
     whether <strong>withdrawing</strong> one would raise your GPA, and what <strong>attending more</strong> would change. Nothing you type is stored.
-    The models are trained on <strong>simulated</strong> transcripts ({{ training_size }} course attempts); see the <a href="{{ url_for('predictions.model_selection') }}">model-selection study</a>.
+    Predictions are learned from <strong>simulated</strong> past students ({{ training_size }} course results). <a href="{{ url_for('predictions.model_selection') }}">How do the predictions work?</a>
   </div></div>
 
   <div class="col-lg-5"><div class="card"><div class="card-header">Your semester</div><div class="card-body">

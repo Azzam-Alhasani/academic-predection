@@ -6,7 +6,7 @@ Dataset: 4984 course attempts (**simulated** transcripts, see app/data/generate_
 
 ## Method
 
-1. **Stage A**: 10 classifiers, default settings, 5-fold cross-validation repeated 3 times (15 scores per model, identical splits).
+1. **Stage A**: 5 classifiers, default settings, 5-fold cross-validation repeated 3 times (15 scores per model, identical splits).
 2. **Stage B**: the strongest candidates plus logistic regression are tuned with *nested* cross-validation (5-fold outer x 2 repeats; inner 3-fold random search, 5 settings).
 3. **Stage C**: choose the highest mean ROC-AUC, then apply the one-standard-error parsimony rule (simplest model within one standard error of the best). `p` values are corrected resampled paired t-tests (Nadeau & Bengio, 2003) against the best model; p < 0.05 means the difference is unlikely to be chance.
 
@@ -17,24 +17,19 @@ Dataset: 4984 course attempts (**simulated** transcripts, see app/data/generate_
 | Model | Accuracy | Balanced acc. | Recall | F1 | ROC-AUC | p vs best |
 |---|---|---|---|---|---|---|
 | Logistic Regression | 0.899 ± 0.017 | 0.694 ± 0.050 | 0.410 ± 0.098 | 0.524 ± 0.104 | 0.887 ± 0.033 | best |
-| Neural Network (MLP) | 0.895 ± 0.018 | 0.685 ± 0.047 | 0.394 ± 0.092 | 0.507 ± 0.097 | 0.878 ± 0.033 | 0.1401 |
-| Gradient Boosting | 0.890 ± 0.020 | 0.689 ± 0.040 | 0.412 ± 0.073 | 0.508 ± 0.084 | 0.868 ± 0.040 | 0.0074 |
+| Gradient Boosting | 0.889 ± 0.020 | 0.692 ± 0.043 | 0.419 ± 0.078 | 0.511 ± 0.087 | 0.870 ± 0.039 | 0.0096 |
 | Random Forest | 0.885 ± 0.019 | 0.683 ± 0.046 | 0.404 ± 0.084 | 0.491 ± 0.091 | 0.860 ± 0.035 | 0.0 |
-| Support Vector Machine (RBF) | 0.895 ± 0.020 | 0.680 ± 0.049 | 0.383 ± 0.089 | 0.501 ± 0.105 | 0.842 ± 0.038 | 0.0002 |
-| Extra Trees | 0.875 ± 0.024 | 0.679 ± 0.045 | 0.409 ± 0.077 | 0.475 ± 0.091 | 0.830 ± 0.038 | 0.0 |
-| k-Nearest Neighbours | 0.883 ± 0.024 | 0.679 ± 0.042 | 0.396 ± 0.069 | 0.486 ± 0.090 | 0.804 ± 0.045 | 0.0 |
 | Decision Tree | 0.869 ± 0.022 | 0.667 ± 0.043 | 0.387 ± 0.080 | 0.450 ± 0.089 | 0.698 ± 0.054 | 0.0 |
-| Naive Bayes | 0.228 ± 0.017 | 0.516 ± 0.021 | 0.914 ± 0.058 | 0.247 ± 0.011 | 0.521 ± 0.023 | 0.0 |
-| Majority-class baseline | 0.862 ± 0.002 | 0.500 ± 0.000 | 0.000 ± 0.000 | 0.000 ± 0.000 | 0.500 ± 0.000 | 0.0 |
+| Baseline: always guess "pass" | 0.862 ± 0.002 | 0.500 ± 0.000 | 0.000 ± 0.000 | 0.000 ± 0.000 | 0.500 ± 0.000 | 0.0 |
 
 ### Stage B (tuned, nested CV)
 
 | Model | Accuracy | Recall | F1 | ROC-AUC | p vs best | Within 1 SE |
 |---|---|---|---|---|---|---|
 | Logistic Regression | 0.898 ± 0.019 | 0.402 ± 0.103 | 0.518 ± 0.113 | 0.886 ± 0.037 | best | yes |
-| Gradient Boosting | 0.894 ± 0.020 | 0.367 ± 0.092 | 0.487 ± 0.107 | 0.881 ± 0.040 | 0.137 | yes |
+| Gradient Boosting | 0.894 ± 0.019 | 0.367 ± 0.091 | 0.487 ± 0.104 | 0.881 ± 0.040 | 0.1314 | yes |
 | Random Forest | 0.889 ± 0.017 | 0.314 ± 0.094 | 0.434 ± 0.106 | 0.870 ± 0.041 | 0.0027 | no |
-| Neural Network (MLP) | 0.895 ± 0.019 | 0.404 ± 0.088 | 0.514 ± 0.101 | 0.870 ± 0.038 | 0.2297 | no |
+| Decision Tree | 0.887 ± 0.021 | 0.367 ± 0.075 | 0.475 ± 0.091 | 0.864 ± 0.040 | 0.0032 | no |
 
 **Selected: Logistic Regression** - parameters {'C': 0.3}.
 
@@ -45,24 +40,19 @@ Dataset: 4984 course attempts (**simulated** transcripts, see app/data/generate_
 | Model | Accuracy | Balanced acc. | Recall | F1 | ROC-AUC | p vs best |
 |---|---|---|---|---|---|---|
 | Logistic Regression | 0.900 ± 0.019 | 0.707 ± 0.059 | 0.441 ± 0.116 | 0.543 ± 0.113 | 0.909 ± 0.034 | best |
-| Neural Network (MLP) | 0.897 ± 0.021 | 0.709 ± 0.057 | 0.449 ± 0.111 | 0.543 ± 0.106 | 0.905 ± 0.035 | 0.3643 |
-| Gradient Boosting | 0.889 ± 0.025 | 0.715 ± 0.058 | 0.474 ± 0.107 | 0.540 ± 0.109 | 0.893 ± 0.039 | 0.0063 |
+| Gradient Boosting | 0.889 ± 0.026 | 0.716 ± 0.061 | 0.477 ± 0.111 | 0.542 ± 0.115 | 0.893 ± 0.039 | 0.0088 |
 | Random Forest | 0.880 ± 0.023 | 0.703 ± 0.057 | 0.458 ± 0.108 | 0.512 ± 0.104 | 0.871 ± 0.047 | 0.0015 |
-| Support Vector Machine (RBF) | 0.898 ± 0.019 | 0.688 ± 0.053 | 0.398 ± 0.102 | 0.514 ± 0.111 | 0.858 ± 0.039 | 0.0 |
-| Extra Trees | 0.872 ± 0.026 | 0.697 ± 0.055 | 0.455 ± 0.100 | 0.495 ± 0.100 | 0.844 ± 0.048 | 0.0 |
-| k-Nearest Neighbours | 0.889 ± 0.026 | 0.709 ± 0.053 | 0.460 ± 0.094 | 0.534 ± 0.104 | 0.841 ± 0.046 | 0.0 |
 | Decision Tree | 0.858 ± 0.031 | 0.703 ± 0.054 | 0.489 ± 0.098 | 0.489 ± 0.094 | 0.704 ± 0.054 | 0.0 |
-| Naive Bayes | 0.228 ± 0.017 | 0.516 ± 0.021 | 0.915 ± 0.058 | 0.247 ± 0.011 | 0.521 ± 0.024 | 0.0 |
-| Majority-class baseline | 0.862 ± 0.002 | 0.500 ± 0.000 | 0.000 ± 0.000 | 0.000 ± 0.000 | 0.500 ± 0.000 | 0.0 |
+| Baseline: always guess "pass" | 0.862 ± 0.002 | 0.500 ± 0.000 | 0.000 ± 0.000 | 0.000 ± 0.000 | 0.500 ± 0.000 | 0.0 |
 
 ### Stage B (tuned, nested CV)
 
 | Model | Accuracy | Recall | F1 | ROC-AUC | p vs best | Within 1 SE |
 |---|---|---|---|---|---|---|
 | Logistic Regression | 0.900 ± 0.019 | 0.434 ± 0.117 | 0.538 ± 0.117 | 0.909 ± 0.035 | best | yes |
-| Gradient Boosting | 0.896 ± 0.024 | 0.433 ± 0.132 | 0.530 ± 0.136 | 0.906 ± 0.039 | 0.3227 | yes |
-| Neural Network (MLP) | 0.896 ± 0.021 | 0.443 ± 0.136 | 0.534 ± 0.126 | 0.905 ± 0.037 | 0.3537 | yes |
+| Gradient Boosting | 0.897 ± 0.023 | 0.436 ± 0.130 | 0.534 ± 0.133 | 0.906 ± 0.038 | 0.2175 | yes |
 | Random Forest | 0.892 ± 0.019 | 0.331 ± 0.090 | 0.456 ± 0.111 | 0.898 ± 0.043 | 0.0942 | no |
+| Decision Tree | 0.889 ± 0.025 | 0.473 ± 0.126 | 0.538 ± 0.119 | 0.880 ± 0.046 | 0.0046 | no |
 
 **Selected: Logistic Regression** - parameters {'C': 0.3}.
 
@@ -70,20 +60,20 @@ Dataset: 4984 course attempts (**simulated** transcripts, see app/data/generate_
 
 | Model | RMSE | MAE | R² |
 |---|---|---|---|
-| Ridge Regression | 7.634 ± 0.341 | 5.923 ± 0.285 | 0.522 ± 0.031 |
 | Linear Regression | 7.658 ± 0.350 | 5.948 ± 0.295 | 0.519 ± 0.032 |
-| Gradient Boosting | 7.695 ± 0.314 | 5.977 ± 0.256 | 0.515 ± 0.028 |
+| Gradient Boosting | 7.691 ± 0.315 | 5.975 ± 0.257 | 0.515 ± 0.028 |
 | Random Forest | 7.870 ± 0.307 | 6.136 ± 0.247 | 0.492 ± 0.029 |
+| Decision Tree | 8.085 ± 0.290 | 6.325 ± 0.249 | 0.464 ± 0.028 |
 
-**Selected: Ridge Regression.**
+**Selected: Linear Regression.**
 
 ## Final-mark regression - During the semester (with attendance %)
 
 | Model | RMSE | MAE | R² |
 |---|---|---|---|
-| Gradient Boosting | 7.184 ± 0.269 | 5.689 ± 0.231 | 0.577 ± 0.022 |
-| Ridge Regression | 7.210 ± 0.273 | 5.680 ± 0.228 | 0.574 ± 0.022 |
+| Gradient Boosting | 7.182 ± 0.273 | 5.688 ± 0.237 | 0.577 ± 0.022 |
 | Linear Regression | 7.232 ± 0.280 | 5.696 ± 0.241 | 0.571 ± 0.023 |
 | Random Forest | 7.374 ± 0.251 | 5.867 ± 0.210 | 0.554 ± 0.021 |
+| Decision Tree | 7.664 ± 0.245 | 6.099 ± 0.217 | 0.519 ± 0.021 |
 
-**Selected: Ridge Regression.**
+**Selected: Linear Regression.**
