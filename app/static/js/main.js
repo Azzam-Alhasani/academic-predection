@@ -3,7 +3,11 @@
  * so everything is wired up here through data-* attributes.
  */
 
-const PALETTE = ['#0d6efd', '#20c997', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#0dcaf0', '#adb5bd'];
+// Categorical order for the light theme (checked for colour-blind separation and contrast on white).
+const PALETTE = ['#2e5e9e', '#00937c', '#b7791f', '#8a55b0', '#c0392b', '#5c8ad6'];
+// Fixed colours for outcomes, so "Failed" is always red and never just "series 2".
+const OUTCOME = { Passed: '#1d7a52', Failed: '#b02a20', Withdrawn: '#8a94a3' };
+const FONT = "'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif";
 
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('currentDate');
@@ -13,13 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Mobile sidebar toggle
-  const toggle = document.getElementById('sidebarToggle');
-  const sidebar = document.querySelector('.sidebar');
-  if (toggle && sidebar) {
-    toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
-    document.addEventListener('click', (e) => {
-      if (!sidebar.contains(e.target) && !toggle.contains(e.target)) sidebar.classList.remove('open');
+  // Mobile menu toggle
+  const toggle = document.getElementById('navToggle');
+  const nav = document.getElementById('siteNav');
+  if (toggle && nav) {
+    toggle.addEventListener('click', () => {
+      const open = nav.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
   }
 
@@ -57,10 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function buildCharts() {
   if (typeof Chart === 'undefined') return;
-  Chart.defaults.color = '#8a9099';
-  Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
-  Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+  Chart.defaults.color = '#5d6979';
+  Chart.defaults.borderColor = '#e4e8ee';
+  Chart.defaults.font.family = FONT;
   Chart.defaults.font.size = 12;
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+  Chart.defaults.plugins.tooltip.backgroundColor = '#0f2341';
+  Chart.defaults.plugins.tooltip.padding = 8;
+  Chart.defaults.plugins.tooltip.cornerRadius = 3;
 
   document.querySelectorAll('canvas[data-chart]').forEach(canvas => {
     const d = canvas.dataset;
@@ -69,22 +77,29 @@ function buildCharts() {
     let datasets;
     if (d.datasets) datasets = JSON.parse(d.datasets);
     else if (d.points) datasets = JSON.parse(d.points);
-    else datasets = [{ label: d.label || '', data: JSON.parse(d.values) }];
+    else datasets = [{ label: d.label || '', data: JSON.parse(d.values), ...(d.color ? { color: d.color } : {}) }];
 
     datasets = datasets.map((s, i) => {
       const color = s.color || PALETTE[i % PALETTE.length];
-      if (type === 'doughnut') return { ...s, backgroundColor: s.backgroundColor || PALETTE, borderWidth: 0 };
-      if (type === 'line') return { borderColor: color, backgroundColor: color + '33', tension: .3, fill: false, pointRadius: 3, ...s };
-      if (type === 'scatter') return { pointRadius: 3, backgroundColor: color + 'aa', ...s };
-      return { backgroundColor: color, borderRadius: 4, ...s };
+      if (type === 'doughnut') {
+        const colors = labels.map((l, j) => OUTCOME[l] || PALETTE[j % PALETTE.length]);
+        return { ...s, backgroundColor: s.backgroundColor || colors, borderColor: '#fff', borderWidth: 2 };
+      }
+      if (type === 'line') return { borderColor: color, backgroundColor: color, borderWidth: 2, tension: .3, fill: false, pointRadius: 4, ...s };
+      if (type === 'scatter') return { pointRadius: 4, backgroundColor: color + 'b3', borderColor: '#fff', borderWidth: 1, ...s };
+      return { backgroundColor: color, borderRadius: 4, borderSkipped: 'start', maxBarThickness: 48, ...s };
     });
 
     const options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: datasets.length > 1 || type === 'doughnut' } } };
     if (type !== 'doughnut') {
-      options.scales = { y: { beginAtZero: true, title: { display: !!d.unit, text: d.unit || '' } }, x: {} };
+      options.scales = { y: { beginAtZero: true, title: { display: !!d.unit, text: d.unit || '' } }, x: { grid: { display: false } } };
       if (d.max) options.scales.y.max = Number(d.max);
       if (d.xtitle) options.scales.x.title = { display: true, text: d.xtitle };
-      if (d.horizontal !== undefined) options.indexAxis = 'y';
+      if (d.horizontal !== undefined) {
+        options.indexAxis = 'y';
+        options.scales.x.grid = { display: true };
+        options.scales.y.grid = { display: false };
+      }
     }
     new Chart(canvas, { type, data: { labels, datasets }, options });
   });

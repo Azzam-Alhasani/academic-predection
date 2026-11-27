@@ -8,7 +8,7 @@
 {% else %}
 {% macro kpi(icon, color, value, label) %}
 <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card h-100"><div class="card-body">
-  <div class="stat-icon bg-{{ color }}-subtle text-{{ color }}"><i class="fa-solid {{ icon }}"></i></div>
+  <div class="stat-icon bg-{{ color }}-subtle text-{{ color }}"><i class="fa-solid {{ icon }}" aria-hidden="true"></i></div>
   <div class="stat-value">{{ value }}</div><div class="stat-label">{{ label }}</div></div></div></div>
 {% endmacro %}
 <div class="row g-4 mt-1">
@@ -37,8 +37,8 @@
     <div class="chart-box"><canvas data-chart="bar" data-labels='{{ stats.cgpa_by_major.labels|tojson }}' data-values='{{ stats.cgpa_by_major['values']|tojson }}' data-label="CGPA" data-unit="CGPA" data-max="4"></canvas></div></div></div></div>
 
   <div class="col-lg-7"><div class="card h-100"><div class="card-header">Hardest courses (difficulty index)</div><div class="card-body">
-    <div class="chart-box"><canvas data-chart="bar" data-horizontal="1" data-labels='{{ stats.hardest.labels|tojson }}' data-values='{{ stats.hardest['values']|tojson }}' data-label="Marks lost" data-unit="Marks below the same students' other courses" data-color="#dc3545"></canvas></div>
-    <p class="small text-muted mt-2 mb-0">Difficulty = how many marks lower students score here than in their other courses. It is measured from the records, not assumed.</p></div></div></div>
+    <div class="chart-box"><canvas data-chart="bar" data-horizontal="1" data-labels='{{ stats.hardest.labels|tojson }}' data-values='{{ stats.hardest['values']|tojson }}' data-label="Marks lost" data-unit="Marks below the same students' other courses" data-color="#b02a20"></canvas></div>
+    <p class="small text-muted mt-2 mb-0">Difficulty is how many marks lower students score in this course than in their other courses. It comes from the records, not from an assumption.</p></div></div></div>
 
   <div class="col-lg-5"><div class="card h-100"><div class="card-header">Grade points (from the UTAS transcript)</div><div class="card-body p-0">
     <table class="table table-sm mb-0"><thead><tr><th>Mark (assumed)</th><th>Letter</th><th>Points</th><th>Result</th></tr></thead><tbody>

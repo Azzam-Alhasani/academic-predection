@@ -5,7 +5,7 @@
 {% block content %}
 <div class="card mt-3"><div class="card-body">
   <form method="GET" class="row g-2 align-items-end">
-    <div class="col-md-3"><label class="form-label small">Search name / ID</label><input name="q" value="{{ q }}" class="form-control form-control-sm" maxlength="60" /></div>
+    <div class="col-md-3"><label class="form-label small">Search by name or ID</label><input name="q" value="{{ q }}" class="form-control form-control-sm" maxlength="60" /></div>
     <div class="col-md-3"><label class="form-label small">Major</label>
       <select name="major" class="form-select form-select-sm"><option value="">All majors</option>
       {% for m in majors %}<option {{ 'selected' if m == major }}>{{ m }}</option>{% endfor %}</select></div>

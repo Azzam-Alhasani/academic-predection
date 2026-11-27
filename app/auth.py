@@ -148,6 +148,8 @@ def ensure_admin_from_env(app=None) -> None:
     not exist yet. The password must satisfy the password rules; a weak one is refused.
     """
     password = os.environ.get("ADMIN_PASSWORD")
+    if app is not None:
+        app.config["ADMIN_PASSWORD_PROBLEM"] = None
     if not password:
         return
     username = os.environ.get("ADMIN_USERNAME", "admin")
@@ -158,6 +160,9 @@ def ensure_admin_from_env(app=None) -> None:
     problem = validate_password(password, production=production)
     if problem:
         print(f" ! ADMIN_PASSWORD was not used: {problem}")
+        if app is not None:
+            # Shown on the login page: otherwise the owner only sees "Invalid username or password".
+            app.config["ADMIN_PASSWORD_PROBLEM"] = problem
         return
     add_user(username, password, role="admin")
 
@@ -234,6 +239,7 @@ def _login_page(status=200):
         dev_hint=current_app.config.get("DEBUG") and DEV_ADMIN_USERNAME or None,
         dev_password=DEV_ADMIN_PASSWORD,
         no_accounts=not has_accounts(),
+        admin_password_problem=current_app.config.get("ADMIN_PASSWORD_PROBLEM"),
     ), status
 
 
